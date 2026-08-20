@@ -1,4 +1,5 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ArrowRight, Activity, LineChart } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { AccountCard } from "@/components/kocel/account-card";
@@ -10,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useDerivLogout, useDerivSession } from "@/hooks/use-deriv-session";
 import { ERROR_MESSAGES } from "@/lib/deriv-types";
+import { FOREX_MARKETS, INDICES_MARKETS } from "@/bots/markets";
 
 export const Route = createFileRoute("/dashboard")({
   // Session lives in an HttpOnly cookie and is validated per request by the
@@ -17,16 +19,16 @@ export const Route = createFileRoute("/dashboard")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Dashboard — Kocel Rise & Fall Bot" },
+      { title: "Choose a Bot — Kocel Rise & Fall Bot" },
       {
         name: "description",
         content:
-          "Your connected Deriv account overview: live balance, account type and connection status.",
+          "Pick the Forex Scalper or Indices Scalper environment. Each bot keeps its own markets, settings, statistics and trade history.",
       },
-      { property: "og:title", content: "Kocel Dashboard" },
+      { property: "og:title", content: "Kocel Bot Selection" },
       {
         property: "og:description",
-        content: "Live Deriv account status inside the Kocel Rise & Fall Bot workspace.",
+        content: "Two isolated Rise & Fall scalping environments on your connected Deriv account.",
       },
     ],
   }),
@@ -77,11 +79,10 @@ function DashboardPage() {
 
         <main className="min-w-0 flex-1 space-y-5 py-6">
           <div>
-            <h1 className="text-xl font-bold text-foreground sm:text-2xl">
-              Welcome to Kocel Rise &amp; Fall Bot
-            </h1>
+            <h1 className="text-xl font-bold text-foreground sm:text-2xl">Choose your bot</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Your Deriv account is connected. Account data below is read live from Deriv.
+              Both environments run on the account selected below. Settings, statistics and trade
+              history stay completely separate per bot.
             </p>
           </div>
 
@@ -110,8 +111,8 @@ function DashboardPage() {
                   Active account
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  You have {authState.accounts.length} Deriv accounts. Choose which demo or
-                  real account Kocel should use.
+                  You have {authState.accounts.length} Deriv accounts. Choose which demo or real
+                  account the bots should use.
                 </p>
               </div>
               <AccountSwitcher accounts={authState.accounts} active={account} />
@@ -120,31 +121,110 @@ function DashboardPage() {
 
           <AccountCard account={account} status={status} attempt={reconnectAttempt} />
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Card className="border-dashed border-border bg-surface p-5">
-              <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Next</p>
-              <h2 className="mt-2 text-base font-semibold text-foreground">Bot selection</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Choosing between the Forex Scalper and Indices Scalper arrives in Phase 2. No
-                trading logic is active in this build.
-              </p>
-            </Card>
-            <Card className="border-dashed border-border bg-surface p-5">
-              <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
-                Session
-              </p>
-              <h2 className="mt-2 text-base font-semibold text-foreground">Secure connection</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Your Deriv access token is held server-side in an encrypted, HttpOnly session
-                cookie. Log out at any time to end it.
-              </p>
-              <Button variant="outline" size="sm" className="mt-4 w-fit" onClick={refresh}>
-                Refresh connection
-              </Button>
-            </Card>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <BotCard
+              title="Forex Scalper Bot"
+              to="/bots/forex"
+              icon={<LineChart className="size-5 text-primary" aria-hidden="true" />}
+              summary="Rise & Fall scalping on major currency pairs using trend, momentum, volatility and market-structure confirmation."
+              markets={FOREX_MARKETS.map((m) => m.label)}
+              points={[
+                "EMA trend stack + RSI / MACD momentum",
+                "ATR and spread volatility filters",
+                "Multi-timeframe confirmation before entry",
+              ]}
+            />
+            <BotCard
+              title="Indices Scalper Bot"
+              to="/bots/indices"
+              icon={<Activity className="size-5 text-info" aria-hidden="true" />}
+              summary="Tick-level Rise & Fall scalping on synthetic volatility indices using momentum, velocity, pressure and exhaustion analysis."
+              markets={INDICES_MARKETS.map((m) => m.label)}
+              points={[
+                "Tick momentum, velocity and acceleration",
+                "Directional pressure and micro-trend detection",
+                "Volatility spike and exhaustion vetoes",
+              ]}
+            />
           </div>
+
+          <Card className="border-dashed border-border bg-surface p-5">
+            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
+              Build status
+            </p>
+            <h2 className="mt-2 text-base font-semibold text-foreground">
+              Interface only — no trading logic
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              This build contains authentication and the complete bot interfaces. Market data,
+              analysis, signal generation and trade execution arrive in later phases, so every
+              analysis value is shown as a placeholder rather than an estimate.
+            </p>
+            <Button variant="outline" size="sm" className="mt-4 w-fit" onClick={refresh}>
+              Refresh connection
+            </Button>
+          </Card>
         </main>
       </div>
     </div>
+  );
+}
+
+function BotCard({
+  title,
+  to,
+  icon,
+  summary,
+  markets,
+  points,
+}: {
+  title: string;
+  to: "/bots/forex" | "/bots/indices";
+  icon: React.ReactNode;
+  summary: string;
+  markets: string[];
+  points: string[];
+}) {
+  return (
+    <Card className="gap-4 border-border bg-card p-5 transition-colors hover:border-primary/50">
+      <div className="flex items-start gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-border bg-surface">
+          {icon}
+        </span>
+        <div>
+          <h2 className="text-base font-semibold text-foreground">{title}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{summary}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {markets.map((market) => (
+          <span
+            key={market}
+            className="rounded-full border border-border bg-surface px-2 py-0.5 font-mono text-[11px] text-muted-foreground"
+          >
+            {market}
+          </span>
+        ))}
+      </div>
+
+      <ul className="space-y-1.5 text-sm text-muted-foreground">
+        {points.map((point) => (
+          <li key={point} className="flex gap-2">
+            <span aria-hidden="true" className="text-primary">
+              ·
+            </span>
+            {point}
+          </li>
+        ))}
+      </ul>
+
+      <Button asChild className="w-full sm:w-fit">
+        <Link to={to}>
+          Open {title}
+          <ArrowRight className="size-4" aria-hidden="true" />
+        </Link>
+      </Button>
+    </Card>
   );
 }
