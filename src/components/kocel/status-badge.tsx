@@ -17,12 +17,12 @@ export function StatusBadge({
   pulse = false,
   className,
 }: {
-  tone?: StatusTone;
+  tone?: StatusTone | undefined;
   label: string;
   /** Text symbol so status is never conveyed by colour alone. */
-  symbol?: string;
-  pulse?: boolean;
-  className?: string;
+  symbol?: string | undefined;
+  pulse?: boolean | undefined;
+  className?: string | undefined;
 }) {
   return (
     <span

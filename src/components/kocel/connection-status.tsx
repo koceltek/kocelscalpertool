@@ -14,8 +14,8 @@ export function ConnectionStatusBadge({
   className,
 }: {
   status: ConnectionStatus;
-  attempt?: number;
-  className?: string;
+  attempt?: number | undefined;
+  className?: string | undefined;
 }) {
   const config = map[status];
   const label =

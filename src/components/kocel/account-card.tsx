@@ -43,7 +43,7 @@ export function AccountCard({
 }: {
   account: DerivAccount | null;
   status: ConnectionStatus;
-  attempt?: number;
+  attempt?: number | undefined;
 }) {
   return (
     <Card className="gap-5 border-border bg-card p-5 sm:p-6">

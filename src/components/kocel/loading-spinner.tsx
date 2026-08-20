@@ -6,8 +6,8 @@ export function LoadingSpinner({
   label,
   className,
 }: {
-  label?: string;
-  className?: string;
+  label?: string | undefined;
+  className?: string | undefined;
 }) {
   return (
     <div

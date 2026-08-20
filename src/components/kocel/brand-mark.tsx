@@ -4,8 +4,8 @@ export function BrandMark({
   size = "md",
   className,
 }: {
-  size?: "sm" | "md" | "lg";
-  className?: string;
+  size?: "sm" | "md" | "lg" | undefined;
+  className?: string | undefined;
 }) {
   return (
     <div className={cn("flex items-center gap-3", className)}>

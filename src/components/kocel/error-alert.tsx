@@ -12,9 +12,9 @@ export function ErrorAlert({
 }: {
   title: string;
   message: string;
-  actionLabel?: string;
+  actionLabel?: string | undefined;
   onAction?: () => void;
-  className?: string;
+  className?: string | undefined;
 }) {
   return (
     <div
