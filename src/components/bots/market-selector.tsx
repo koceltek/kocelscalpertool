@@ -1,6 +1,5 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Metric, Panel, PhaseTag } from "@/components/bots/panel";
 import { marketsFor } from "@/bots/markets";
 import type { BotType } from "@/bots/contracts";
 
@@ -45,55 +44,6 @@ export function MarketSelector({
           </div>
         );
       })}
-    </div>
-  );
-}
-
-/**
- * Live market cards. The fields differ per bot because the two data engines
- * expose different measurements.
- */
-export function MarketCards({
-  botType,
-  selected,
-  fields,
-  phaseTag,
-  description,
-}: {
-  botType: BotType;
-  selected: string[];
-  fields: string[];
-  phaseTag: string;
-  description: string;
-}) {
-  const markets = marketsFor(botType).filter((m) => selected.includes(m.symbol));
-
-  return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {markets.map((market) => (
-        <Panel
-          key={market.symbol}
-          title={market.label}
-          description={description}
-          action={<PhaseTag>{phaseTag}</PhaseTag>}
-        >
-          <div className="grid grid-cols-2 gap-2">
-            {fields.map((field) => (
-              <Metric key={field} label={field} />
-            ))}
-          </div>
-          <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-            {market.symbol} · feed inactive
-          </p>
-        </Panel>
-      ))}
-      {markets.length === 0 ? (
-        <Panel title="No markets selected" description="Enable markets in this bot's settings.">
-          <p className="text-sm text-muted-foreground">
-            Choose at least one market so the data engine knows what to subscribe to.
-          </p>
-        </Panel>
-      ) : null}
     </div>
   );
 }
