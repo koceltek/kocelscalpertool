@@ -13,7 +13,7 @@ export function ErrorAlert({
   title: string;
   message: string;
   actionLabel?: string | undefined;
-  onAction?: () => void;
+  onAction?: (() => void) | undefined;
   className?: string | undefined;
 }) {
   return (
