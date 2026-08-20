@@ -11,7 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as BotsForexRouteImport } from './routes/bots.forex'
+import { Route as BotsIndicesRouteImport } from './routes/bots.indices'
 import { Route as OauthCallbackRouteImport } from './routes/oauth/callback'
+import { Route as BotsForexIndexRouteImport } from './routes/bots.forex.index'
+import { Route as BotsIndicesIndexRouteImport } from './routes/bots.indices.index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -23,39 +27,86 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BotsForexRoute = BotsForexRouteImport.update({
+  id: '/bots/forex',
+  path: '/bots/forex',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BotsIndicesRoute = BotsIndicesRouteImport.update({
+  id: '/bots/indices',
+  path: '/bots/indices',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OauthCallbackRoute = OauthCallbackRouteImport.update({
   id: '/oauth/callback',
   path: '/oauth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BotsForexIndexRoute = BotsForexIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BotsForexRoute,
+} as any)
+const BotsIndicesIndexRoute = BotsIndicesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BotsIndicesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/bots/forex': typeof BotsForexRouteWithChildren
+  '/bots/indices': typeof BotsIndicesRouteWithChildren
   '/oauth/callback': typeof OauthCallbackRoute
+  '/bots/forex/': typeof BotsForexIndexRoute
+  '/bots/indices/': typeof BotsIndicesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/oauth/callback': typeof OauthCallbackRoute
+  '/bots/forex': typeof BotsForexIndexRoute
+  '/bots/indices': typeof BotsIndicesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/bots/forex': typeof BotsForexRouteWithChildren
+  '/bots/indices': typeof BotsIndicesRouteWithChildren
   '/oauth/callback': typeof OauthCallbackRoute
+  '/bots/forex/': typeof BotsForexIndexRoute
+  '/bots/indices/': typeof BotsIndicesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/oauth/callback'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/bots/forex'
+    | '/bots/indices'
+    | '/oauth/callback'
+    | '/bots/forex/'
+    | '/bots/indices/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/oauth/callback'
-  id: '__root__' | '/' | '/dashboard' | '/oauth/callback'
+  to: '/' | '/dashboard' | '/oauth/callback' | '/bots/forex' | '/bots/indices'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/bots/forex'
+    | '/bots/indices'
+    | '/oauth/callback'
+    | '/bots/forex/'
+    | '/bots/indices/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
+  BotsForexRoute: typeof BotsForexRouteWithChildren
+  BotsIndicesRoute: typeof BotsIndicesRouteWithChildren
   OauthCallbackRoute: typeof OauthCallbackRoute
 }
 
@@ -75,6 +126,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/bots/forex': {
+      id: '/bots/forex'
+      path: '/bots/forex'
+      fullPath: '/bots/forex'
+      preLoaderRoute: typeof BotsForexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bots/indices': {
+      id: '/bots/indices'
+      path: '/bots/indices'
+      fullPath: '/bots/indices'
+      preLoaderRoute: typeof BotsIndicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/oauth/callback': {
       id: '/oauth/callback'
       path: '/oauth/callback'
@@ -82,12 +147,52 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OauthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/bots/forex/': {
+      id: '/bots/forex/'
+      path: '/'
+      fullPath: '/bots/forex/'
+      preLoaderRoute: typeof BotsForexIndexRouteImport
+      parentRoute: typeof BotsForexRoute
+    }
+    '/bots/indices/': {
+      id: '/bots/indices/'
+      path: '/'
+      fullPath: '/bots/indices/'
+      preLoaderRoute: typeof BotsIndicesIndexRouteImport
+      parentRoute: typeof BotsIndicesRoute
+    }
   }
 }
+
+interface BotsForexRouteChildren {
+  BotsForexIndexRoute: typeof BotsForexIndexRoute
+}
+
+const BotsForexRouteChildren: BotsForexRouteChildren = {
+  BotsForexIndexRoute: BotsForexIndexRoute,
+}
+
+const BotsForexRouteWithChildren = BotsForexRoute._addFileChildren(
+  BotsForexRouteChildren,
+)
+
+interface BotsIndicesRouteChildren {
+  BotsIndicesIndexRoute: typeof BotsIndicesIndexRoute
+}
+
+const BotsIndicesRouteChildren: BotsIndicesRouteChildren = {
+  BotsIndicesIndexRoute: BotsIndicesIndexRoute,
+}
+
+const BotsIndicesRouteWithChildren = BotsIndicesRoute._addFileChildren(
+  BotsIndicesRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
+  BotsForexRoute: BotsForexRouteWithChildren,
+  BotsIndicesRoute: BotsIndicesRouteWithChildren,
   OauthCallbackRoute: OauthCallbackRoute,
 }
 export const routeTree = rootRouteImport
