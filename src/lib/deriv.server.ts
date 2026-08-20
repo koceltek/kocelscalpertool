@@ -24,13 +24,14 @@ export class DerivError extends Error {
 export async function exchangeAuthorizationCode(input: {
   code: string;
   codeVerifier: string;
+  redirectUri?: string | undefined;
 }): Promise<{ accessToken: string; expiresAt: number }> {
   const body = new URLSearchParams({
     grant_type: "authorization_code",
     client_id: DERIV_CLIENT_ID,
     code: input.code,
     code_verifier: input.codeVerifier,
-    redirect_uri: DERIV_REDIRECT_URI,
+    redirect_uri: input.redirectUri ?? DERIV_REDIRECT_URI,
   });
 
   const res = await fetch(DERIV_TOKEN_URL, {

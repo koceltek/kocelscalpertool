@@ -8,10 +8,11 @@ import { Button } from "@/components/ui/button";
 import {
   DERIV_AUTH_URL,
   DERIV_CLIENT_ID,
-  DERIV_REDIRECT_URI,
   DERIV_SCOPES,
+  getRedirectUri,
   OAUTH_STATE_KEY,
   PKCE_VERIFIER_KEY,
+  REDIRECT_URI_KEY,
 } from "@/lib/deriv-config";
 import { ERROR_MESSAGES, type AppError } from "@/lib/deriv-types";
 import { deriveCodeChallenge, generateCodeVerifier, generateState } from "@/lib/pkce";
@@ -61,11 +62,13 @@ function LoginPage() {
 
       sessionStorage.setItem(PKCE_VERIFIER_KEY, verifier);
       sessionStorage.setItem(OAUTH_STATE_KEY, state);
+      const redirectUri = getRedirectUri();
+      sessionStorage.setItem(REDIRECT_URI_KEY, redirectUri);
 
       const url = new URL(DERIV_AUTH_URL);
       url.searchParams.set("response_type", "code");
       url.searchParams.set("client_id", DERIV_CLIENT_ID);
-      url.searchParams.set("redirect_uri", DERIV_REDIRECT_URI);
+      url.searchParams.set("redirect_uri", redirectUri);
       url.searchParams.set("scope", DERIV_SCOPES.join(" "));
       url.searchParams.set("state", state);
       url.searchParams.set("code_challenge", challenge);

@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { AccountCard } from "@/components/kocel/account-card";
+import { AccountSwitcher } from "@/components/kocel/account-switcher";
 import { AppHeader, DesktopNav } from "@/components/kocel/app-header";
 import { ErrorAlert } from "@/components/kocel/error-alert";
 import { LoadingSpinner } from "@/components/kocel/loading-spinner";
@@ -100,6 +101,21 @@ function DashboardPage() {
                 Reconnecting... attempt {Math.max(reconnectAttempt, 1)}
               </p>
             </Card>
+          ) : null}
+
+          {authState && authState.accounts.length > 1 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
+                  Active account
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  You have {authState.accounts.length} Deriv accounts. Choose which demo or
+                  real account Kocel should use.
+                </p>
+              </div>
+              <AccountSwitcher accounts={authState.accounts} active={account} />
+            </div>
           ) : null}
 
           <AccountCard account={account} status={status} attempt={reconnectAttempt} />
