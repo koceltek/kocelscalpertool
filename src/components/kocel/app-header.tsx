@@ -10,12 +10,12 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import type { ConnectionStatus } from "@/hooks/use-deriv-session";
 import type { DerivAccount } from "@/lib/deriv-types";
 
-const navItems = [
-  { label: "Dashboard", to: "/dashboard" as const, available: true },
-  { label: "Bots", to: "/dashboard" as const, available: false },
-  { label: "Forex Scalper", to: "/dashboard" as const, available: false },
-  { label: "Indices Scalper", to: "/dashboard" as const, available: false },
-  { label: "Settings", to: "/dashboard" as const, available: false },
+type NavPath = "/dashboard" | "/bots/forex" | "/bots/indices";
+
+const navItems: { label: string; to: NavPath; available: boolean }[] = [
+  { label: "Bots", to: "/dashboard", available: true },
+  { label: "Forex Scalper", to: "/bots/forex", available: true },
+  { label: "Indices Scalper", to: "/bots/indices", available: true },
 ];
 
 export function AppHeader({
@@ -93,7 +93,7 @@ function NavRow({
   onNavigate,
 }: {
   label: string;
-  to: "/dashboard";
+  to: NavPath;
   available: boolean;
   onNavigate: () => void;
 }) {
