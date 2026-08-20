@@ -9,7 +9,7 @@ import { LoadingSpinner } from "@/components/kocel/loading-spinner";
 import { Button } from "@/components/ui/button";
 import { authStateQueryKey } from "@/hooks/use-deriv-session";
 import { completeDerivLogin } from "@/lib/auth.functions";
-import { OAUTH_STATE_KEY, PKCE_VERIFIER_KEY } from "@/lib/deriv-config";
+import { getRedirectUri, OAUTH_STATE_KEY, PKCE_VERIFIER_KEY, REDIRECT_URI_KEY } from "@/lib/deriv-config";
 import { ERROR_MESSAGES, type AppError } from "@/lib/deriv-types";
 
 export const Route = createFileRoute("/oauth/callback")({
@@ -48,6 +48,7 @@ function CallbackPage() {
     const clearPkce = () => {
       sessionStorage.removeItem(PKCE_VERIFIER_KEY);
       sessionStorage.removeItem(OAUTH_STATE_KEY);
+      sessionStorage.removeItem(REDIRECT_URI_KEY);
     };
 
     const errParam = params.get("error");
@@ -71,7 +72,10 @@ function CallbackPage() {
 
     void (async () => {
       try {
-        const result = await exchange({ data: { code, codeVerifier: verifier } });
+        const redirectUri = sessionStorage.getItem(REDIRECT_URI_KEY) ?? getRedirectUri();
+        const result = await exchange({
+          data: { code, codeVerifier: verifier, redirectUri },
+        });
         clearPkce();
         queryClient.setQueryData(authStateQueryKey, result);
         navigate({ to: "/dashboard", replace: true });
