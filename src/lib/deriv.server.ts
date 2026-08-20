@@ -9,13 +9,9 @@ import {
   DERIV_TOKEN_URL,
 } from "./deriv-config";
 
-export type DerivAccount = {
-  accountId: string;
-  accountType: "DEMO" | "REAL" | "UNKNOWN";
-  currency: string | null;
-  balance: number | null;
-  balanceAvailable: boolean;
-};
+import type { DerivAccount } from "./deriv-types";
+
+export type { DerivAccount };
 
 export class DerivError extends Error {
   code: "AUTH_FAILED" | "API_ERROR" | "SESSION_EXPIRED";
