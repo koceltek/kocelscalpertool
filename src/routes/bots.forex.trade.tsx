@@ -10,6 +10,9 @@ import { useDerivSession } from "@/hooks/use-deriv-session";
 import { useForexData } from "@/bots/data/use-forex-data";
 import { useForexStrategy } from "@/bots/strategy/use-forex-strategy";
 import { useForexExecution } from "@/bots/forex-execution/use-forex-execution";
+import { ErrorAlert } from "@/components/kocel/error-alert";
+import { toast } from "sonner";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/bots/forex/trade")({
   component: ForexTrade,
@@ -18,7 +21,7 @@ export const Route = createFileRoute("/bots/forex/trade")({
 function ForexTrade() {
   const { status, account, refresh } = useDerivSession();
   const { settings } = useBotSettings("forex");
-  const { state, busy, start, stop } = useBotRuntime("forex", status === "connected");
+  const { state, busy, start, stop, fail } = useBotRuntime("forex", status === "connected");
   const data = useForexData(state === "running" || state === "starting");
   const execution = useForexExecution(
     state === "running",
@@ -29,6 +32,17 @@ function ForexTrade() {
     () => void refresh(),
   );
   useForexStrategy(state === "running", settings.selectedMarkets, execution.executeSignal);
+
+  const closedMarkets = Object.values(data.symbols)
+    .filter((symbol) => symbol.availability === "CLOSED")
+    .map((symbol) => symbol.displayName);
+
+  useEffect(() => {
+    if (data.engineStatus === "ERROR") {
+      if (state === "starting" || state === "running") fail();
+      toast.error("Forex market data unavailable", { description: data.message });
+    }
+  }, [data.engineStatus, data.message, fail, state]);
 
   return (
     <div className="space-y-5">
@@ -48,6 +62,15 @@ function ForexTrade() {
       />
 
       <DataStatusBadge snapshot={data} active={state === "running" || state === "starting"} />
+      {data.engineStatus === "ERROR" ? (
+        <ErrorAlert title="Forex market data error" message={data.message} />
+      ) : null}
+      {closedMarkets.length > 0 ? (
+        <ErrorAlert
+          title="Forex market closed"
+          message={`${closedMarkets.join(", ")} is currently closed. The bot will wait until the market opens.`}
+        />
+      ) : null}
       <Panel title="Account" description="Authenticated Deriv account balance.">
         <div className="grid grid-cols-2 gap-3">
           <Metric

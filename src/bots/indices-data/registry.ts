@@ -39,7 +39,24 @@ export function normalizeIndex(raw: RawSymbol): IndicesSymbol | null {
 
 export class IndicesSymbolRegistry {
   private symbols = new Map<string, IndicesSymbol>();
-  update(rawSymbols: RawSymbol[]) { for (const raw of rawSymbols) { const symbol = normalizeIndex(raw); if (symbol) this.symbols.set(symbol.symbol, symbol); } return this.list(); }
+  update(rawSymbols: RawSymbol[]) {
+    for (const raw of rawSymbols) {
+      const symbol = normalizeIndex(raw);
+      if (symbol) this.symbols.set(symbol.symbol, symbol);
+    }
+    for (const symbol of INDICES_ALLOWED_SYMBOLS) {
+      if (!this.symbols.has(symbol)) {
+        const fallback = normalizeIndex({
+          underlying_symbol: symbol,
+          underlying_symbol_name: `Volatility ${symbol.replace(/^R_/, "")}`,
+          market: "synthetic",
+          underlying_symbol_type: "synthetic",
+        });
+        if (fallback) this.symbols.set(symbol, fallback);
+      }
+    }
+    return this.list();
+  }
   list() { return [...this.symbols.values()].map((symbol) => ({ ...symbol })); }
   get(symbol: string) { const value = this.symbols.get(symbol); return value ? { ...value } : null; }
   updateAvailability(symbol: string, isOpen: boolean, isSuspended: boolean) {

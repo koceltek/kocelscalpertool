@@ -130,6 +130,7 @@ export class IndicesDataEngine {
 
   private async startInternal() {
     this.running = true; this.engineStatus = "INITIALIZING"; this.attachProvider();
+    this.emit({ type: "CONNECTION_RESTORED", payload: {} });
     try {
       await this.provider.connect(); this.engineStatus = "CONNECTING";
       await this.syncServerTime();
@@ -141,10 +142,11 @@ export class IndicesDataEngine {
       const enabled = this.registry.enabled();
       for (const metadata of enabled) this.ensureState(metadata);
       await Promise.allSettled(enabled.map((metadata) => this.warmSymbol(metadata)));
-      this.startHealthMonitor(); this.evaluateEngineStatus();
+      this.startHealthMonitor(); this.evaluateEngineStatus(); this.emit({ type: "CONNECTION_RESTORED", payload: {} });
     } catch (error) {
       this.engineStatus = "ERROR"; dataLogger.error(INDEX_SCOPE, "Indices data engine failed", error);
       for (const state of this.states.values()) state.status = "ERROR";
+      this.emit({ type: "CONNECTION_LOST", payload: {} });
       throw error;
     }
   }

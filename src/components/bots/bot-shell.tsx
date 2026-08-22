@@ -12,6 +12,9 @@ import { Button } from "@/components/ui/button";
 import { useDerivLogout, useDerivSession } from "@/hooks/use-deriv-session";
 import { ERROR_MESSAGES } from "@/lib/deriv-types";
 import { BOT_LABEL, type BotType } from "@/bots/contracts";
+import { useBotRuntime } from "@/bots/bot-runtime";
+import { useForexData } from "@/bots/data/use-forex-data";
+import { useIndicesData } from "@/bots/indices-data";
 import { cn } from "@/lib/utils";
 
 type ForexPath = "/bots/forex/trade" | "/bots/forex/history" | "/bots/forex/settings";
@@ -47,6 +50,9 @@ export function BotShell({ botType, tagline }: { botType: BotType; tagline: stri
     useDerivSession();
   const logout = useDerivLogout();
   const [loggingOut, setLoggingOut] = useState(false);
+  const { state: botState } = useBotRuntime(botType, status === "connected");
+  useForexData(botType === "forex" && (botState === "running" || botState === "starting"));
+  useIndicesData(botType === "indices" && (botState === "running" || botState === "starting"));
 
   const unauthenticated = authState !== null && !authState.authenticated;
 

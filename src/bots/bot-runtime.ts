@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 
 import type { BotType } from "./contracts";
 
@@ -75,13 +75,29 @@ export function emptySnapshot(botType: BotType, state: BotRunState = "stopped"):
   };
 }
 
+type RuntimeRecord = { state: BotRunState; listeners: Set<() => void> };
+const runtimeRecords: Record<BotType, RuntimeRecord> = {
+  forex: { state: "stopped", listeners: new Set() },
+  indices: { state: "stopped", listeners: new Set() },
+};
+
+function updateRuntime(botType: BotType, state: BotRunState) {
+  runtimeRecords[botType].state = state;
+  for (const listener of runtimeRecords[botType].listeners) listener();
+}
+
 /**
  * Bot-scoped lifecycle gate. Domain engines are started by their bot-specific
  * hooks, while this controller owns the user-visible lifecycle and connection
  * safety state.
  */
 export function useBotRuntime(botType: BotType, connected: boolean) {
-  const [state, setState] = useState<BotRunState>("stopped");
+  const record = runtimeRecords[botType];
+  const state = useSyncExternalStore(
+    (listener) => { record.listeners.add(listener); return () => record.listeners.delete(listener); },
+    () => record.state,
+    () => "stopped" as BotRunState,
+  );
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -94,31 +110,36 @@ export function useBotRuntime(botType: BotType, connected: boolean) {
   // statistics or settings.
   useEffect(() => {
     if (!connected) {
-      setState((current) => (current === "running" || current === "starting" ? "disconnected" : current));
+      if (record.state === "running" || record.state === "starting") updateRuntime(botType, "disconnected");
     } else {
-      setState((current) => (current === "disconnected" ? "stopped" : current));
+      if (record.state === "disconnected") updateRuntime(botType, "stopped");
     }
-  }, [connected]);
+  }, [botType, connected, record]);
 
   const start = useCallback(() => {
     if (!connected) {
-      setState("disconnected");
+      updateRuntime(botType, "disconnected");
       return;
     }
-    setState("starting");
+    updateRuntime(botType, "starting");
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setState("running"), 600);
-  }, [connected]);
+    timer.current = setTimeout(() => updateRuntime(botType, "running"), 600);
+  }, [botType, connected]);
 
   const stop = useCallback(() => {
-    if (state === "stopped" || state === "stopping") return;
-    setState("stopping");
+    if (record.state === "stopped" || record.state === "stopping") return;
+    updateRuntime(botType, "stopping");
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setState("stopped"), 400);
-  }, [state]);
+    timer.current = setTimeout(() => updateRuntime(botType, "stopped"), 400);
+  }, [botType, record]);
+
+  const fail = useCallback(() => {
+    if (timer.current) clearTimeout(timer.current);
+    updateRuntime(botType, "error");
+  }, [botType]);
 
   const snapshot = emptySnapshot(botType, state);
   const busy = state === "starting" || state === "stopping";
 
-  return { state, snapshot, busy, start, stop };
+  return { state, snapshot, busy, start, stop, fail };
 }

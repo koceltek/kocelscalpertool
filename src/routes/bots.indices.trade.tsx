@@ -15,6 +15,9 @@ import { marketLabel } from "@/bots/markets";
 import { useIndicesData } from "@/bots/indices-data";
 import { useIndicesStrategy } from "@/bots/indices-strategy";
 import { useIndicesExecution } from "@/bots/indices-execution";
+import { ErrorAlert } from "@/components/kocel/error-alert";
+import { toast } from "sonner";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/bots/indices/trade")({
   component: IndicesTrade,
@@ -23,7 +26,7 @@ export const Route = createFileRoute("/bots/indices/trade")({
 function IndicesTrade() {
   const { status, account, refresh } = useDerivSession();
   const { settings } = useBotSettings("indices");
-  const { state, snapshot, busy, start, stop } = useBotRuntime("indices", status === "connected");
+  const { state, snapshot, busy, start, stop, fail } = useBotRuntime("indices", status === "connected");
   const indicesData = useIndicesData(state === "running" || state === "starting");
   const execution = useIndicesExecution(
     state === "running",
@@ -36,8 +39,16 @@ function IndicesTrade() {
   );
   useIndicesStrategy(state === "running", (signal) => void execution.executeSignal(signal));
 
+  useEffect(() => {
+    if (indicesData.status === "ERROR" && (state === "starting" || state === "running")) {
+      fail();
+      toast.error("Indices market data could not start", { description: "Check the Deriv connection and try again." });
+    }
+  }, [fail, indicesData.status, state]);
+
   const startIndices = () => {
-    void indicesData.engine.start().then(start).catch(() => undefined);
+    start();
+    void indicesData.engine.start().catch(() => undefined);
   };
 
   const stopIndices = () => {
@@ -63,6 +74,9 @@ function IndicesTrade() {
       />
 
       <Panel title="Market data" description="Live Synthetic Indices data only. Strategy and execution are separate phases.">
+        {indicesData.status === "ERROR" ? (
+          <ErrorAlert title="Indices market data error" message="Deriv did not return usable market data. Check the connection and try starting again." />
+        ) : null}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Metric label="Engine" value={indicesData.status} />
           <Metric label="Enabled indices" value={String(indicesData.engine.getEnabledIndices().length)} />
