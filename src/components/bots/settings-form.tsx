@@ -26,7 +26,7 @@ import {
 import { Panel } from "@/components/bots/panel";
 import { MarketSelector } from "@/components/bots/market-selector";
 import { TRADING_MODES, type BotSettings, type TradingMode } from "@/bots/settings";
-import { BOT_LABEL, type BotType } from "@/bots/contracts";
+import { BOT_LABEL } from "@/bots/contracts";
 import { useBotSettings } from "@/bots/use-bot-settings";
 
 const MODE_HINT: Record<TradingMode, string> = {
@@ -40,17 +40,14 @@ function numberInput(value: number, fallback: number) {
 }
 
 /**
- * Settings screen for one bot. State is keyed by bot type, so Forex settings
- * can never overwrite Indices settings.
+ * Settings screen for the Indices bot.
  */
 export function BotSettingsForm({
-  botType,
   sessionNote,
 }: {
-  botType: BotType;
   sessionNote: string;
 }) {
-  const { settings, hydrated, save, update, reset } = useBotSettings(botType);
+  const { settings, hydrated, save, update, reset } = useBotSettings();
   const [confirmReset, setConfirmReset] = useState(false);
   const [confirmAuto, setConfirmAuto] = useState(false);
 
@@ -64,10 +61,9 @@ export function BotSettingsForm({
     <div className="space-y-5">
       <Panel
         title="Markets"
-        description={`Markets the ${BOT_LABEL[botType]} will subscribe to when the data engine is enabled.`}
+        description="Markets the Indices Scalper Bot will subscribe to when the data engine is enabled."
       >
         <MarketSelector
-          botType={botType}
           selected={settings.selectedMarkets}
           onChange={(next) => update({ selectedMarkets: next })}
         />
@@ -76,12 +72,12 @@ export function BotSettingsForm({
       <Panel title="Trading mode" description="Controls how selective the strategy engine will be.">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor={`mode-${botType}`}>Mode</Label>
+            <Label htmlFor="mode-indices">Mode</Label>
             <Select
               value={settings.tradingMode}
               onValueChange={(value) => update({ tradingMode: value as TradingMode })}
             >
-              <SelectTrigger id={`mode-${botType}`}>
+              <SelectTrigger id="mode-indices">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -96,11 +92,11 @@ export function BotSettingsForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor={`confidence-${botType}`}>
+            <Label htmlFor="confidence-indices">
               Minimum confidence · {settings.confidenceThreshold}%
             </Label>
             <Slider
-              id={`confidence-${botType}`}
+              id="confidence-indices"
               min={50}
               max={100}
               step={1}
@@ -119,42 +115,42 @@ export function BotSettingsForm({
       <Panel title="Risk management" description="Applied by the risk engine before every entry.">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field
-            id={`stake-${botType}`}
+            id="stake-indices"
             label="Stake per trade (USD)"
             value={numberInput(settings.stake, 0.5)}
             step="0.1"
             onChange={(value) => update({ stake: Number(value) })}
           />
           <Field
-            id={`maxloss-${botType}`}
+            id="maxloss-indices"
             label="Max loss per trade (USD)"
             value={numberInput(settings.maxLossPerTrade, 1)}
             step="0.1"
             onChange={(value) => update({ maxLossPerTrade: Number(value) })}
           />
           <Field
-            id={`streak-${botType}`}
+            id="streak-indices"
             label="Max consecutive losses"
             value={numberInput(settings.maxConsecutiveLosses, 3)}
             step="1"
             onChange={(value) => update({ maxConsecutiveLosses: Number(value) })}
           />
           <Field
-            id={`daily-${botType}`}
+            id="daily-indices"
             label="Daily loss limit (USD)"
             value={numberInput(settings.dailyLossLimit, 5)}
             step="0.5"
             onChange={(value) => update({ dailyLossLimit: Number(value) })}
           />
           <Field
-            id={`cooldown-${botType}`}
+            id="cooldown-indices"
             label="Cooldown between trades (seconds)"
             value={numberInput(settings.cooldownSeconds, 10)}
             step="1"
             onChange={(value) => update({ cooldownSeconds: Number(value) })}
           />
           <ToggleRow
-            id={`capital-${botType}`}
+            id="capital-indices"
             label="Capital protection"
             hint="Stops the bot when the daily loss limit is reached."
             checked={settings.capitalProtection}
@@ -166,7 +162,7 @@ export function BotSettingsForm({
       <Panel title="Trading session" description={sessionNote}>
         <div className="grid gap-4 sm:grid-cols-3">
           <ToggleRow
-            id={`session-${botType}`}
+            id="session-indices"
             label="Restrict to session hours"
             hint="Outside this window the bot stays idle."
             checked={settings.tradingSession.enabled}
@@ -175,9 +171,9 @@ export function BotSettingsForm({
             }
           />
           <div className="space-y-2">
-            <Label htmlFor={`start-${botType}`}>Start (UTC)</Label>
+            <Label htmlFor="start-indices">Start (UTC)</Label>
             <Input
-              id={`start-${botType}`}
+              id="start-indices"
               type="time"
               value={settings.tradingSession.start}
               onChange={(event) =>
@@ -188,9 +184,9 @@ export function BotSettingsForm({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`end-${botType}`}>End (UTC)</Label>
+            <Label htmlFor="end-indices">End (UTC)</Label>
             <Input
-              id={`end-${botType}`}
+              id="end-indices"
               type="time"
               value={settings.tradingSession.end}
               onChange={(event) =>
@@ -203,12 +199,12 @@ export function BotSettingsForm({
 
       <Panel
         title="Automation"
-        description={botType === "indices" ? "When enabled, the Indices strategy may request trades after Start and all risk checks pass." : "Auto-trading requires the Forex execution phase."}
+        description="When enabled, the Indices strategy may request trades after Start and all risk checks pass."
       >
         <ToggleRow
-          id={`auto-${botType}`}
+          id="auto-indices"
           label="Auto-trading"
-          hint={botType === "indices" ? "Trades remain subject to signal, account, contract and risk validation." : "Saved as a preference until the Forex execution phase is enabled."}
+          hint="Trades remain subject to signal, account, contract and risk validation."
           checked={settings.autoTrading}
           onChange={(checked) => {
             if (checked) {
@@ -228,14 +224,14 @@ export function BotSettingsForm({
           Reset to defaults
         </Button>
         <span className="text-xs text-muted-foreground">
-          Settings apply to the {BOT_LABEL[botType]} only.
+          Settings apply to the {BOT_LABEL} only.
         </span>
       </div>
 
       <AlertDialog open={confirmReset} onOpenChange={setConfirmReset}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reset {BOT_LABEL[botType]} settings?</AlertDialogTitle>
+            <AlertDialogTitle>Reset {BOT_LABEL} settings?</AlertDialogTitle>
             <AlertDialogDescription>
               This restores the default markets, risk limits and automation preference for this
               bot. The other bot is unaffected.

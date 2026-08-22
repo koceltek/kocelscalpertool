@@ -25,14 +25,17 @@ export function normalizeIndex(raw: RawSymbol): IndicesSymbol | null {
   if (!symbol) return null;
   const market = text(raw["market"]).toLowerCase();
   const type = text(raw["underlying_symbol_type"]).toLowerCase();
-  if (market !== "synthetic" && type !== "synthetic" && !/^(r_|crash|boom|jump|step)/i.test(symbol)) return null;
+  const name = text(raw["underlying_symbol_name"]) || text(raw["display_name"]);
+  if (market !== "synthetic" && type !== "synthetic" && !/^(r_|1hz|crash|boom|jump|step)/i.test(symbol) && !/volatility/i.test(name)) return null;
   const pipSize = getPipSize(raw["pip_size"]);
-  const name = text(raw["underlying_symbol_name"]) || text(raw["display_name"]) || symbol;
+  const displayName = name || symbol;
+  const volatilityNumber = displayName.match(/volatility\s*(\d+)/i)?.[1];
+  const enabled = INDICES_ALLOWED_SYMBOLS.includes(symbol) || Boolean(volatilityNumber && INDICES_ALLOWED_SYMBOLS.some((allowed) => allowed.match(/(?:R_|1HZ)(\d+)/i)?.[1] === volatilityNumber));
   return {
-    symbol, displayName: name, market: "synthetic", submarket: text(raw["submarket"]), subgroup: text(raw["subgroup"]),
+    symbol, displayName, market: "synthetic", submarket: text(raw["submarket"]), subgroup: text(raw["subgroup"]),
     category: classifyIndex(raw), pipSize, precision: getDecimalPrecision(1, pipSize),
     isOpen: bool(raw["exchange_is_open"], true), isSuspended: bool(raw["is_trading_suspended"], false),
-    enabled: INDICES_ALLOWED_SYMBOLS.includes(symbol), preferredTimeframes: INDICES_TIMEFRAMES,
+    enabled, preferredTimeframes: INDICES_TIMEFRAMES,
     dataRequirements: { minTicks: 100 },
   };
 }
@@ -43,17 +46,6 @@ export class IndicesSymbolRegistry {
     for (const raw of rawSymbols) {
       const symbol = normalizeIndex(raw);
       if (symbol) this.symbols.set(symbol.symbol, symbol);
-    }
-    for (const symbol of INDICES_ALLOWED_SYMBOLS) {
-      if (!this.symbols.has(symbol)) {
-        const fallback = normalizeIndex({
-          underlying_symbol: symbol,
-          underlying_symbol_name: `Volatility ${symbol.replace(/^R_/, "")}`,
-          market: "synthetic",
-          underlying_symbol_type: "synthetic",
-        });
-        if (fallback) this.symbols.set(symbol, fallback);
-      }
     }
     return this.list();
   }

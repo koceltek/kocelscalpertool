@@ -15,7 +15,7 @@ export const Route = createFileRoute("/bots/indices/history")({
 function IndicesHistory() {
   const [trades] = useState(loadIndicesTrades);
   const stats = {
-    ...emptyStats("indices"),
+    ...emptyStats(),
     trades: trades.length,
     wins: trades.filter((trade) => trade.result === "WIN").length,
     losses: trades.filter((trade) => trade.result === "LOSS").length,

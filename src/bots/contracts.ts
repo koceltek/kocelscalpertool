@@ -2,20 +2,15 @@
  * Phase 2 UI data contracts.
  *
  * These interfaces are the plug-in points for the future engines:
- *   Forex   — Data Engine (Phase 3), Strategy Engine (Phase 4)
- *   Indices — Data Engine (Phase 3), Strategy Engine (Phase 5)
- *   Shared  — Execution Engine (Phase 6), Risk Engine (Phase 7)
+ *   Indices — Data, strategy, execution and risk engines
  *
  * Nothing in Phase 2 populates them: the UI renders explicit placeholders
  * instead of fabricated prices, signals, trades or statistics.
  */
 
-export type BotType = "forex" | "indices";
+export type BotType = "indices";
 
-export const BOT_LABEL: Record<BotType, string> = {
-  forex: "Forex Scalper Bot",
-  indices: "Indices Scalper Bot",
-};
+export const BOT_LABEL = "Indices Scalper Bot";
 
 export type SignalDirection = "RISE" | "FALL";
 
@@ -32,24 +27,7 @@ export type EngineStatus =
   | "risk_locked"
   | "disconnected";
 
-/** Contract the Phase 3 Forex data engine + Phase 4 strategy engine will return. */
-export interface ForexAnalysisResult {
-  botType: "forex";
-  market: string;
-  timestamp: number;
-  price: number | null;
-  trend: string | null;
-  momentum: string | null;
-  volatility: string | null;
-  structure: string | null;
-  multiTimeframe: string | null;
-  entry: string | null;
-  direction: SignalDirection | null;
-  confidence: number | null;
-  duration: number | null;
-  status: EngineStatus;
-}
-
+/** Contract returned by the Indices data and strategy engines. */
 /** Contract the Phase 3 Indices data engine + Phase 5 strategy engine will return. */
 export interface IndicesAnalysisResult {
   botType: "indices";
@@ -69,7 +47,7 @@ export interface IndicesAnalysisResult {
   status: EngineStatus;
 }
 
-export type BotAnalysisResult = ForexAnalysisResult | IndicesAnalysisResult;
+export type BotAnalysisResult = IndicesAnalysisResult;
 
 /** Contract for the Phase 6 execution engine. */
 export interface BotTrade {

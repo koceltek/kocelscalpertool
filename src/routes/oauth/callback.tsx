@@ -78,7 +78,7 @@ function CallbackPage() {
         });
         clearPkce();
         queryClient.setQueryData(authStateQueryKey, result);
-        navigate({ to: "/dashboard", replace: true });
+        navigate({ to: "/bots/indices/trade", replace: true });
       } catch {
         clearPkce();
         setError({ code: "AUTH_FAILED", message: ERROR_MESSAGES.AUTH_FAILED });

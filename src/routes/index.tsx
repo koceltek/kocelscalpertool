@@ -93,8 +93,8 @@ function LoginPage() {
             Trade smarter. Scalp with precision.
           </h1>
           <p className="mt-3 text-center text-sm leading-relaxed text-muted-foreground">
-            Kocel connects securely to your Deriv account and will give you access to
-            specialised Rise/Fall scalping bots for Forex and Synthetic Indices. Trading
+            Kocel connects securely to your Deriv account and will give you access to the
+            Indices Rise/Fall scalping bot. Trading
             involves risk — no outcome is guaranteed.
           </p>
 
@@ -124,7 +124,7 @@ function LoginPage() {
 
         <button
           type="button"
-          onClick={() => navigate({ to: "/dashboard" })}
+          onClick={() => navigate({ to: "/bots/indices/trade" })}
           className="mx-auto mt-6 block text-xs text-muted-foreground underline-offset-4 hover:underline"
         >
           Already connected? Open dashboard

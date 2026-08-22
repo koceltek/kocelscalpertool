@@ -5,7 +5,7 @@ import {
   REQUEST_TIMEOUT_MS,
   STABLE_CONNECTION_MS,
 } from "./config";
-import { FOREX_DATA_SCOPE, dataLogger } from "./logger";
+import { MARKET_DATA_SCOPE, dataLogger } from "./logger";
 
 type Json = Record<string, unknown>;
 
@@ -61,7 +61,7 @@ export class DerivMarketDataConnection {
     if (this.connectPromise) return this.connectPromise;
 
     this.manualClose = false;
-    dataLogger.info(FOREX_DATA_SCOPE, "Connecting...");
+    dataLogger.info(MARKET_DATA_SCOPE, "Connecting...");
 
     this.connectPromise = new Promise<void>((resolve, reject) => {
       let socket: WebSocket;
@@ -76,7 +76,7 @@ export class DerivMarketDataConnection {
 
       socket.onopen = () => {
         this.connectPromise = null;
-        dataLogger.info(FOREX_DATA_SCOPE, "Market data connection established");
+        dataLogger.info(MARKET_DATA_SCOPE, "Market data connection established");
         this.stableTimer = setTimeout(() => {
           this.reconnectAttempts = 0;
         }, STABLE_CONNECTION_MS);
@@ -90,14 +90,14 @@ export class DerivMarketDataConnection {
         try {
           message = JSON.parse(String(event.data)) as Json;
         } catch (error) {
-          dataLogger.warn(FOREX_DATA_SCOPE, "Unparsable market data message", error);
+          dataLogger.warn(MARKET_DATA_SCOPE, "Unparsable market data message", error);
           return;
         }
         this.handleMessage(message);
       };
 
       socket.onerror = () => {
-        dataLogger.error(FOREX_DATA_SCOPE, "Market data socket error");
+        dataLogger.error(MARKET_DATA_SCOPE, "Market data socket error");
       };
 
       socket.onclose = (event) => {
@@ -106,7 +106,7 @@ export class DerivMarketDataConnection {
         this.socket = null;
         this.clearStableTimer();
         this.failAllPending("Market data connection closed");
-        dataLogger.warn(FOREX_DATA_SCOPE, `Connection closed (code ${event.code})`);
+        dataLogger.warn(MARKET_DATA_SCOPE, `Connection closed (code ${event.code})`);
         this.emitState(false, this.manualClose ? "stopped" : "closed");
         if (wasConnecting) reject(new Error("Market data connection closed"));
         if (!this.manualClose) this.scheduleReconnect();
@@ -135,7 +135,7 @@ export class DerivMarketDataConnection {
       try {
         handler(message);
       } catch (error) {
-        dataLogger.error(FOREX_DATA_SCOPE, "Stream handler failed", error);
+        dataLogger.error(MARKET_DATA_SCOPE, "Stream handler failed", error);
       }
     }
   }
@@ -171,7 +171,7 @@ export class DerivMarketDataConnection {
     const delay = RECONNECT_BACKOFF_MS[index]!;
     this.reconnectAttempts += 1;
     dataLogger.info(
-      FOREX_DATA_SCOPE,
+      MARKET_DATA_SCOPE,
       `Reconnect attempt ${this.reconnectAttempts} scheduled in ${delay}ms`,
     );
     this.reconnectTimer = setTimeout(() => {
@@ -203,7 +203,7 @@ export class DerivMarketDataConnection {
       try {
         handler(connected, reason);
       } catch (error) {
-        dataLogger.error(FOREX_DATA_SCOPE, "State handler failed", error);
+        dataLogger.error(MARKET_DATA_SCOPE, "State handler failed", error);
       }
     }
   }

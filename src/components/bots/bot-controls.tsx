@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { BOT_LABEL, type BotType } from "@/bots/contracts";
+import { BOT_LABEL } from "@/bots/contracts";
 import { RUN_STATE_LABEL, type BotRunState } from "@/bots/bot-runtime";
 import type { BotSettings } from "@/bots/settings";
 import { cn } from "@/lib/utils";
@@ -35,7 +35,6 @@ function stateTone(state: BotRunState) {
 
 /** Bot status readout plus the single large Start / Stop control. */
 export function BotControls({
-  botType,
   state,
   busy,
   settings,
@@ -43,7 +42,6 @@ export function BotControls({
   onStop,
   accountType,
 }: {
-  botType: BotType;
   state: BotRunState;
   busy: boolean;
   settings: BotSettings;
@@ -92,25 +90,19 @@ export function BotControls({
       <p className="max-w-md text-xs leading-relaxed text-muted-foreground">
         {state === "disconnected"
           ? "Reconnect your Deriv account before starting this bot."
-          : botType === "indices"
-            ? accountType === "REAL"
+          : accountType === "REAL"
               ? "REAL account: Start may place real-funds trades when auto-trading is enabled."
-              : "Start begins scanning; trades require auto-trading and every safety check to pass."
-            : "Start begins scanning; trades require every safety check to pass."}
+              : "Start begins scanning; trades require auto-trading and every safety check to pass."}
       </p>
 
       <AlertDialog open={confirmStart} onOpenChange={setConfirmStart}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Start {BOT_LABEL[botType]}?</AlertDialogTitle>
+            <AlertDialogTitle>Start {BOT_LABEL}?</AlertDialogTitle>
             <AlertDialogDescription>
-              {botType === "indices" && accountType === "REAL"
+              {accountType === "REAL"
                 ? "You are connected to a REAL Deriv account. Trading will use real funds when auto-trading is enabled."
-                : botType === "indices"
-                  ? "You are connected to a DEMO account. Trading will use demo funds when auto-trading is enabled."
-                  : accountType === "REAL"
-                    ? "You are connected to a REAL Deriv account. Trading will use real funds."
-                    : "You are connected to a DEMO Deriv account. Trading will use demo funds."}
+                : "You are connected to a DEMO account. Trading will use demo funds when auto-trading is enabled."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="grid grid-cols-1 gap-2 rounded-lg border border-border bg-surface p-3 text-xs sm:grid-cols-3">
@@ -128,7 +120,7 @@ export function BotControls({
       <AlertDialog open={confirmStop} onOpenChange={setConfirmStop}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Stop {BOT_LABEL[botType]}?</AlertDialogTitle>
+            <AlertDialogTitle>Stop {BOT_LABEL}?</AlertDialogTitle>
             <AlertDialogDescription>
               Stopping the bot prevents new trades from being opened. Any already-active contract is
               handled according to its supported Deriv contract lifecycle — stopping does not

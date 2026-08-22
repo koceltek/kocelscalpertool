@@ -5,8 +5,7 @@ import type { BotType } from "./contracts";
 /**
  * Runtime (run/stop) state for a single bot.
  *
- * Each bot keeps its own record — there is deliberately no global bot status,
- * so Forex can be RUNNING while Indices is STOPPED and vice versa.
+ * Runtime state is shared across the Indices Trade, History and Settings sections.
  */
 export type BotRunState =
   | "stopped"
@@ -76,14 +75,11 @@ export function emptySnapshot(botType: BotType, state: BotRunState = "stopped"):
 }
 
 type RuntimeRecord = { state: BotRunState; listeners: Set<() => void> };
-const runtimeRecords: Record<BotType, RuntimeRecord> = {
-  forex: { state: "stopped", listeners: new Set() },
-  indices: { state: "stopped", listeners: new Set() },
-};
+const runtimeRecord: RuntimeRecord = { state: "stopped", listeners: new Set() };
 
 function updateRuntime(botType: BotType, state: BotRunState) {
-  runtimeRecords[botType].state = state;
-  for (const listener of runtimeRecords[botType].listeners) listener();
+  runtimeRecord.state = state;
+  for (const listener of runtimeRecord.listeners) listener();
 }
 
 /**
@@ -92,7 +88,7 @@ function updateRuntime(botType: BotType, state: BotRunState) {
  * safety state.
  */
 export function useBotRuntime(botType: BotType, connected: boolean) {
-  const record = runtimeRecords[botType];
+  const record = runtimeRecord;
   const state = useSyncExternalStore(
     (listener) => { record.listeners.add(listener); return () => record.listeners.delete(listener); },
     () => record.state,
@@ -138,8 +134,12 @@ export function useBotRuntime(botType: BotType, connected: boolean) {
     updateRuntime(botType, "error");
   }, [botType]);
 
+  const ready = useCallback(() => {
+    if (record.state === "starting") updateRuntime(botType, "running");
+  }, [botType, record]);
+
   const snapshot = emptySnapshot(botType, state);
   const busy = state === "starting" || state === "stopping";
 
-  return { state, snapshot, busy, start, stop, fail };
+  return { state, snapshot, busy, start, stop, fail, ready };
 }

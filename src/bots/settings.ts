@@ -1,7 +1,6 @@
 import { z } from "zod";
 
-import type { BotType } from "./contracts";
-import { FOREX_MARKETS, INDICES_MARKETS } from "./markets";
+import { INDICES_MARKETS } from "./markets";
 
 export const TRADING_MODES = ["conservative", "normal", "aggressive"] as const;
 export type TradingMode = (typeof TRADING_MODES)[number];
@@ -27,16 +26,12 @@ export const botSettingsSchema = z.object({
 export type BotSettings = z.infer<typeof botSettingsSchema>;
 
 /**
- * Forex and Indices settings are stored under separate keys and never merged,
- * so changing one bot can never modify the other.
+ * Indices settings are stored separately from account and session data.
  */
-export const SETTINGS_STORAGE_KEY: Record<BotType, string> = {
-  forex: "kocel:settings:forex:v1",
-  indices: "kocel:settings:indices:v1",
-};
+export const SETTINGS_STORAGE_KEY = "kocel:settings:indices:v1";
 
-export function defaultSettings(botType: BotType): BotSettings {
-  const markets = (botType === "forex" ? FOREX_MARKETS : INDICES_MARKETS).map((m) => m.symbol);
+export function defaultSettings(): BotSettings {
+  const markets = INDICES_MARKETS.map((m) => m.symbol);
   return {
     selectedMarkets: markets,
     tradingMode: "normal",
@@ -57,11 +52,11 @@ export function defaultSettings(botType: BotType): BotSettings {
  * bot-scoped so it can be moved to server-side, per-user storage in a later
  * phase without changing the UI.
  */
-export function loadSettings(botType: BotType): BotSettings {
-  const fallback = defaultSettings(botType);
+export function loadSettings(): BotSettings {
+  const fallback = defaultSettings();
   if (typeof window === "undefined") return fallback;
   try {
-    const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY[botType]);
+    const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
     if (!raw) return fallback;
     const parsed = botSettingsSchema.safeParse(JSON.parse(raw));
     return parsed.success ? parsed.data : fallback;
@@ -70,7 +65,7 @@ export function loadSettings(botType: BotType): BotSettings {
   }
 }
 
-export function persistSettings(botType: BotType, settings: BotSettings): void {
+export function persistSettings(settings: BotSettings): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(SETTINGS_STORAGE_KEY[botType], JSON.stringify(settings));
+  window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
 }

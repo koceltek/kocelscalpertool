@@ -51,4 +51,4 @@ class DataLogger {
 }
 
 export const dataLogger = new DataLogger();
-export const FOREX_DATA_SCOPE = "FOREX DATA";
+export const MARKET_DATA_SCOPE = "INDICES MARKET DATA";

@@ -93,11 +93,14 @@ export type IndicesMarketSnapshot = {
   dataHealth: IndicesDataHealth;
 };
 
-export type IndicesEngineStatus = "STOPPED" | "INITIALIZING" | "CONNECTING" | "READY" | "ERROR";
+export type IndicesEngineStatus = "STOPPED" | "INITIALIZING" | "CONNECTING" | "LOADING_DATA" | "SUBSCRIBING" | "READY" | "PARTIALLY_READY" | "WAITING_FOR_DATA" | "ERROR";
 export type IndicesEngineSnapshot = {
   status: IndicesEngineStatus;
   running: boolean;
   serverTimeOffset: number;
+  configuredCount: number;
+  readyCount: number;
+  message: string | null;
   symbols: Record<string, IndicesMarketSnapshot>;
 };
 

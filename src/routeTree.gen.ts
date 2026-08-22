@@ -11,13 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as BotsForexRouteImport } from './routes/bots.forex'
 import { Route as BotsIndicesRouteImport } from './routes/bots.indices'
 import { Route as OauthCallbackRouteImport } from './routes/oauth/callback'
-import { Route as BotsForexIndexRouteImport } from './routes/bots.forex.index'
-import { Route as BotsForexHistoryRouteImport } from './routes/bots.forex.history'
-import { Route as BotsForexSettingsRouteImport } from './routes/bots.forex.settings'
-import { Route as BotsForexTradeRouteImport } from './routes/bots.forex.trade'
 import { Route as BotsIndicesIndexRouteImport } from './routes/bots.indices.index'
 import { Route as BotsIndicesHistoryRouteImport } from './routes/bots.indices.history'
 import { Route as BotsIndicesSettingsRouteImport } from './routes/bots.indices.settings'
@@ -33,11 +28,6 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BotsForexRoute = BotsForexRouteImport.update({
-  id: '/bots/forex',
-  path: '/bots/forex',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const BotsIndicesRoute = BotsIndicesRouteImport.update({
   id: '/bots/indices',
   path: '/bots/indices',
@@ -47,26 +37,6 @@ const OauthCallbackRoute = OauthCallbackRouteImport.update({
   id: '/oauth/callback',
   path: '/oauth/callback',
   getParentRoute: () => rootRouteImport,
-} as any)
-const BotsForexIndexRoute = BotsForexIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => BotsForexRoute,
-} as any)
-const BotsForexHistoryRoute = BotsForexHistoryRouteImport.update({
-  id: '/history',
-  path: '/history',
-  getParentRoute: () => BotsForexRoute,
-} as any)
-const BotsForexSettingsRoute = BotsForexSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => BotsForexRoute,
-} as any)
-const BotsForexTradeRoute = BotsForexTradeRouteImport.update({
-  id: '/trade',
-  path: '/trade',
-  getParentRoute: () => BotsForexRoute,
 } as any)
 const BotsIndicesIndexRoute = BotsIndicesIndexRouteImport.update({
   id: '/',
@@ -92,45 +62,31 @@ const BotsIndicesTradeRoute = BotsIndicesTradeRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
-  '/bots/forex': typeof BotsForexRouteWithChildren
   '/bots/indices': typeof BotsIndicesRouteWithChildren
   '/oauth/callback': typeof OauthCallbackRoute
-  '/bots/forex/history': typeof BotsForexHistoryRoute
-  '/bots/forex/settings': typeof BotsForexSettingsRoute
-  '/bots/forex/trade': typeof BotsForexTradeRoute
   '/bots/indices/history': typeof BotsIndicesHistoryRoute
   '/bots/indices/settings': typeof BotsIndicesSettingsRoute
   '/bots/indices/trade': typeof BotsIndicesTradeRoute
-  '/bots/forex/': typeof BotsForexIndexRoute
   '/bots/indices/': typeof BotsIndicesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/oauth/callback': typeof OauthCallbackRoute
-  '/bots/forex/history': typeof BotsForexHistoryRoute
-  '/bots/forex/settings': typeof BotsForexSettingsRoute
-  '/bots/forex/trade': typeof BotsForexTradeRoute
   '/bots/indices/history': typeof BotsIndicesHistoryRoute
   '/bots/indices/settings': typeof BotsIndicesSettingsRoute
   '/bots/indices/trade': typeof BotsIndicesTradeRoute
-  '/bots/forex': typeof BotsForexIndexRoute
   '/bots/indices': typeof BotsIndicesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
-  '/bots/forex': typeof BotsForexRouteWithChildren
   '/bots/indices': typeof BotsIndicesRouteWithChildren
   '/oauth/callback': typeof OauthCallbackRoute
-  '/bots/forex/history': typeof BotsForexHistoryRoute
-  '/bots/forex/settings': typeof BotsForexSettingsRoute
-  '/bots/forex/trade': typeof BotsForexTradeRoute
   '/bots/indices/history': typeof BotsIndicesHistoryRoute
   '/bots/indices/settings': typeof BotsIndicesSettingsRoute
   '/bots/indices/trade': typeof BotsIndicesTradeRoute
-  '/bots/forex/': typeof BotsForexIndexRoute
   '/bots/indices/': typeof BotsIndicesIndexRoute
 }
 export interface FileRouteTypes {
@@ -138,51 +94,36 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dashboard'
-    | '/bots/forex'
     | '/bots/indices'
     | '/oauth/callback'
-    | '/bots/forex/history'
-    | '/bots/forex/settings'
-    | '/bots/forex/trade'
     | '/bots/indices/history'
     | '/bots/indices/settings'
     | '/bots/indices/trade'
-    | '/bots/forex/'
     | '/bots/indices/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/dashboard'
     | '/oauth/callback'
-    | '/bots/forex/history'
-    | '/bots/forex/settings'
-    | '/bots/forex/trade'
     | '/bots/indices/history'
     | '/bots/indices/settings'
     | '/bots/indices/trade'
-    | '/bots/forex'
     | '/bots/indices'
   id:
     | '__root__'
     | '/'
     | '/dashboard'
-    | '/bots/forex'
     | '/bots/indices'
     | '/oauth/callback'
-    | '/bots/forex/history'
-    | '/bots/forex/settings'
-    | '/bots/forex/trade'
     | '/bots/indices/history'
     | '/bots/indices/settings'
     | '/bots/indices/trade'
-    | '/bots/forex/'
     | '/bots/indices/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
-  BotsForexRoute: typeof BotsForexRouteWithChildren
   BotsIndicesRoute: typeof BotsIndicesRouteWithChildren
   OauthCallbackRoute: typeof OauthCallbackRoute
 }
@@ -203,13 +144,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/bots/forex': {
-      id: '/bots/forex'
-      path: '/bots/forex'
-      fullPath: '/bots/forex'
-      preLoaderRoute: typeof BotsForexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/bots/indices': {
       id: '/bots/indices'
       path: '/bots/indices'
@@ -223,34 +157,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/oauth/callback'
       preLoaderRoute: typeof OauthCallbackRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/bots/forex/': {
-      id: '/bots/forex/'
-      path: '/'
-      fullPath: '/bots/forex/'
-      preLoaderRoute: typeof BotsForexIndexRouteImport
-      parentRoute: typeof BotsForexRoute
-    }
-    '/bots/forex/history': {
-      id: '/bots/forex/history'
-      path: '/history'
-      fullPath: '/bots/forex/history'
-      preLoaderRoute: typeof BotsForexHistoryRouteImport
-      parentRoute: typeof BotsForexRoute
-    }
-    '/bots/forex/settings': {
-      id: '/bots/forex/settings'
-      path: '/settings'
-      fullPath: '/bots/forex/settings'
-      preLoaderRoute: typeof BotsForexSettingsRouteImport
-      parentRoute: typeof BotsForexRoute
-    }
-    '/bots/forex/trade': {
-      id: '/bots/forex/trade'
-      path: '/trade'
-      fullPath: '/bots/forex/trade'
-      preLoaderRoute: typeof BotsForexTradeRouteImport
-      parentRoute: typeof BotsForexRoute
     }
     '/bots/indices/': {
       id: '/bots/indices/'
@@ -283,24 +189,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface BotsForexRouteChildren {
-  BotsForexHistoryRoute: typeof BotsForexHistoryRoute
-  BotsForexSettingsRoute: typeof BotsForexSettingsRoute
-  BotsForexTradeRoute: typeof BotsForexTradeRoute
-  BotsForexIndexRoute: typeof BotsForexIndexRoute
-}
-
-const BotsForexRouteChildren: BotsForexRouteChildren = {
-  BotsForexHistoryRoute: BotsForexHistoryRoute,
-  BotsForexSettingsRoute: BotsForexSettingsRoute,
-  BotsForexTradeRoute: BotsForexTradeRoute,
-  BotsForexIndexRoute: BotsForexIndexRoute,
-}
-
-const BotsForexRouteWithChildren = BotsForexRoute._addFileChildren(
-  BotsForexRouteChildren,
-)
-
 interface BotsIndicesRouteChildren {
   BotsIndicesHistoryRoute: typeof BotsIndicesHistoryRoute
   BotsIndicesSettingsRoute: typeof BotsIndicesSettingsRoute
@@ -322,7 +210,6 @@ const BotsIndicesRouteWithChildren = BotsIndicesRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
-  BotsForexRoute: BotsForexRouteWithChildren,
   BotsIndicesRoute: BotsIndicesRouteWithChildren,
   OauthCallbackRoute: OauthCallbackRoute,
 }

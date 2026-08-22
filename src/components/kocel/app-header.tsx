@@ -10,12 +10,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import type { ConnectionStatus } from "@/hooks/use-deriv-session";
 import type { DerivAccount } from "@/lib/deriv-types";
 
-type NavPath = "/dashboard" | "/bots/forex" | "/bots/indices";
+type NavPath = "/bots/indices";
 
 const navItems: { label: string; to: NavPath; available: boolean }[] = [
-  { label: "Bots", to: "/dashboard", available: true },
-  { label: "Forex Scalper", to: "/bots/forex", available: true },
-  { label: "Indices Scalper", to: "/bots/indices", available: true },
+  { label: "Indices Scalper Bot", to: "/bots/indices", available: true },
 ];
 
 export function AppHeader({
@@ -56,7 +54,7 @@ export function AppHeader({
               </nav>
             </SheetContent>
           </Sheet>
-          <Link to="/dashboard" className="rounded-md">
+          <Link to="/bots/indices/trade" className="rounded-md">
             <BrandMark size="sm" />
           </Link>
         </div>

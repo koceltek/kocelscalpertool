@@ -9,20 +9,20 @@ const nested = (value: unknown, key: string) => value && typeof value === "objec
 
 export class IndicesProposalEngine {
   constructor(private readonly request: TradingRequest) {}
-  async contracts(symbol: string) { return this.request("contracts_for", { contracts_for: symbol, currency: "" }); }
+  async contracts(symbol: string) { return this.request("contracts_for", { contracts_for: symbol }); }
   async proposal(input: { symbol: string; direction: "RISE" | "FALL"; stake: number; currency: string; duration: number; durationUnit: string }) {
     const contracts = await this.contracts(input.symbol);
     const available = JSON.stringify(contracts).toUpperCase();
     const requested = input.direction === "RISE" ? ["CALL", "RISE"] : ["PUT", "FALL"];
     const contractType = requested.find((type) => available.includes(type));
     if (!contractType) throw new Error("CONTRACT_UNAVAILABLE");
-    return this.request("proposal", { proposal: 1, amount: input.stake, basis: "stake", contract_type: contractType, currency: input.currency, duration: input.duration, duration_unit: input.durationUnit, symbol: input.symbol });
+    return this.request("proposal", { proposal: 1, amount: input.stake, basis: "stake", contract_type: contractType, currency: input.currency, duration: input.duration, duration_unit: input.durationUnit, underlying_symbol: input.symbol });
   }
   validate(response: Record<string, unknown>, input: { symbol: string; stake: number; currency: string }) {
     const proposal = (response["proposal"] ?? {}) as Record<string, unknown>;
     const id = typeof proposal["id"] === "string" || typeof proposal["id"] === "number" ? String(proposal["id"]) : null;
     const ask = number(proposal["ask_price"] ?? proposal["display_value"]);
-    const symbol = String(proposal["underlying"] ?? proposal["symbol"] ?? input.symbol);
+    const symbol = String(proposal["underlying_symbol"] ?? proposal["underlying"] ?? input.symbol);
     const currency = String(proposal["currency"] ?? input.currency);
     if (!id || symbol !== input.symbol || currency !== input.currency || ask === null || ask > input.stake * 1.01) throw new Error("INVALID_PROPOSAL");
     return { id, askPrice: ask, payout: number(proposal["payout"]), expiresAt: number(proposal["date_expiry"]) };

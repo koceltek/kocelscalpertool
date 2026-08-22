@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import type { BotType } from "./contracts";
 import {
   botSettingsSchema,
   defaultSettings,
@@ -11,14 +10,14 @@ import {
 } from "./settings";
 
 /** Bot-scoped settings state. Each bot type gets its own isolated record. */
-export function useBotSettings(botType: BotType) {
-  const [settings, setSettings] = useState<BotSettings>(() => defaultSettings(botType));
+export function useBotSettings() {
+  const [settings, setSettings] = useState<BotSettings>(() => defaultSettings());
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setSettings(loadSettings(botType));
+    setSettings(loadSettings());
     setHydrated(true);
-  }, [botType]);
+  }, []);
 
   const save = useCallback(
     (next: BotSettings) => {
@@ -28,10 +27,10 @@ export function useBotSettings(botType: BotType) {
         return false;
       }
       setSettings(parsed.data);
-      persistSettings(botType, parsed.data);
+      persistSettings(parsed.data);
       return true;
     },
-    [botType],
+    [],
   );
 
   /** Updates in-memory state without persisting (used while editing). */
@@ -40,10 +39,10 @@ export function useBotSettings(botType: BotType) {
   }, []);
 
   const reset = useCallback(() => {
-    const next = defaultSettings(botType);
+    const next = defaultSettings();
     setSettings(next);
-    persistSettings(botType, next);
-  }, [botType]);
+    persistSettings(next);
+  }, []);
 
   return { settings, hydrated, save, update, reset };
 }

@@ -1,19 +1,16 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { marketsFor } from "@/bots/markets";
-import type { BotType } from "@/bots/contracts";
 
 /** Market checklist. Selection is persisted per bot and used by later phases. */
 export function MarketSelector({
-  botType,
   selected,
   onChange,
 }: {
-  botType: BotType;
   selected: string[];
   onChange: (next: string[]) => void;
 }) {
-  const markets = marketsFor(botType);
+  const markets = marketsFor();
 
   function toggle(symbol: string, checked: boolean) {
     onChange(checked ? [...selected, symbol] : selected.filter((s) => s !== symbol));
@@ -22,7 +19,7 @@ export function MarketSelector({
   return (
     <div className="space-y-2">
       {markets.map((market) => {
-        const id = `market-${botType}-${market.symbol}`;
+        const id = `market-indices-${market.symbol}`;
         const isChecked = selected.includes(market.symbol);
         return (
           <div

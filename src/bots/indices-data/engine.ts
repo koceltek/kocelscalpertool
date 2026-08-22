@@ -27,6 +27,7 @@ type SymbolState = {
   status: IndicesMarketState["connectionState"];
   error: string | null;
   wasStale: boolean;
+  contractSupported: boolean;
 };
 
 const INDEX_SCOPE = "INDICES DATA";
@@ -113,6 +114,7 @@ export class IndicesDataEngine {
   private engineStatus: IndicesEngineStatus = "STOPPED";
   private running = false;
   private serverTimeOffset = 0;
+  private message: string | null = null;
 
   constructor(provider: MarketDataProvider = new DerivIndicesDataProvider()) { this.provider = provider; }
 
@@ -129,10 +131,10 @@ export class IndicesDataEngine {
   }
 
   private async startInternal() {
-    this.running = true; this.engineStatus = "INITIALIZING"; this.attachProvider();
+    this.running = true; this.engineStatus = "INITIALIZING"; this.message = "Connecting to Deriv market data..."; this.attachProvider();
     this.emit({ type: "CONNECTION_RESTORED", payload: {} });
     try {
-      await this.provider.connect(); this.engineStatus = "CONNECTING";
+      await this.provider.connect(); this.engineStatus = "CONNECTING"; this.message = "Discovering synthetic indices...";
       await this.syncServerTime();
       const response = await this.provider.request({ active_symbols: "brief", product_type: "basic" });
       const rawSymbols = Array.isArray(response["active_symbols"]) ? response["active_symbols"] as Json[] : [];
@@ -140,11 +142,14 @@ export class IndicesDataEngine {
       for (const symbol of this.registry.update(rawSymbols)) this.emit({ type: "INDEX_DISCOVERED", payload: symbol });
       await this.refreshTradingTimes();
       const enabled = this.registry.enabled();
+      this.engineStatus = "LOADING_DATA"; this.message = "Validating Rise/Fall contracts and loading history...";
       for (const metadata of enabled) this.ensureState(metadata);
+      await Promise.allSettled(enabled.map((metadata) => this.validateContracts(metadata)));
+      this.engineStatus = "SUBSCRIBING"; this.message = "Subscribing to live index ticks...";
       await Promise.allSettled(enabled.map((metadata) => this.warmSymbol(metadata)));
       this.startHealthMonitor(); this.evaluateEngineStatus(); this.emit({ type: "CONNECTION_RESTORED", payload: {} });
     } catch (error) {
-      this.engineStatus = "ERROR"; dataLogger.error(INDEX_SCOPE, "Indices data engine failed", error);
+      this.engineStatus = "ERROR"; this.message = error instanceof Error ? error.message : String(error); dataLogger.error(INDEX_SCOPE, "Indices data engine failed", error);
       for (const state of this.states.values()) state.status = "ERROR";
       this.emit({ type: "CONNECTION_LOST", payload: {} });
       throw error;
@@ -184,7 +189,8 @@ export class IndicesDataEngine {
   private async syncServerTime() {
     const response = await this.provider.request({ time: 1 });
     const serverTime = asNumber(response["time"]);
-    if (Number.isFinite(serverTime)) this.serverTimeOffset = serverTime * 1000 - Date.now();
+    const offset = serverTime * 1000 - Date.now();
+    this.serverTimeOffset = Number.isFinite(offset) && Math.abs(offset) < 60_000 ? offset : 0;
   }
 
   private async refreshTradingTimes() {
@@ -210,12 +216,35 @@ export class IndicesDataEngine {
   private ensureState(metadata: IndicesSymbol) {
     const state = this.states.get(metadata.symbol);
     if (state) { state.metadata = metadata; return state; }
-    const created: SymbolState = { metadata, buffer: new IndicesTickBuffer(INDICES_TICK_BUFFER_SIZE), candles: new IndicesCandleEngine(metadata.symbol), latest: null, historyLoaded: false, subscribed: false, subscriptionId: null, status: "INITIALIZING", error: null, wasStale: false };
+    const created: SymbolState = { metadata, buffer: new IndicesTickBuffer(INDICES_TICK_BUFFER_SIZE), candles: new IndicesCandleEngine(metadata.symbol), latest: null, historyLoaded: false, subscribed: false, subscriptionId: null, status: "INITIALIZING", error: null, wasStale: false, contractSupported: false };
     this.states.set(metadata.symbol, created); return created;
+  }
+
+  private async validateContracts(metadata: IndicesSymbol) {
+    const state = this.ensureState(metadata);
+    try {
+      const response = await this.provider.request({ contracts_for: metadata.symbol });
+      const contractTypes = new Set<string>();
+      const collect = (value: unknown): void => {
+        if (Array.isArray(value)) { value.forEach(collect); return; }
+        if (!value || typeof value !== "object") return;
+        const record = value as Json;
+        const type = asText(record["contract_type"]);
+        if (type) contractTypes.add(type.toUpperCase());
+        Object.values(record).forEach(collect);
+      };
+      collect(response);
+      state.contractSupported = contractTypes.has("CALL") && contractTypes.has("PUT");
+      if (!state.contractSupported) state.error = "Rise/Fall contracts are unavailable for this index.";
+    } catch (error) {
+      state.contractSupported = false;
+      state.error = error instanceof Error ? error.message : "Contract availability could not be verified.";
+    }
   }
 
   private async warmSymbol(metadata: IndicesSymbol) {
     const state = this.ensureState(metadata); state.status = "LOADING_HISTORY"; state.error = null;
+    if (!state.contractSupported) { state.status = "ERROR"; return; }
     if (metadata.isSuspended) { state.status = "SUSPENDED"; return; }
     if (!metadata.isOpen) { state.status = "CLOSED"; return; }
     try {
@@ -270,7 +299,14 @@ export class IndicesDataEngine {
     }
     this.evaluateEngineStatus();
   }
-  private evaluateEngineStatus() { const states = [...this.states.values()]; this.engineStatus = states.length > 0 && states.every((state) => state.status === "LIVE") ? "READY" : states.some((state) => state.status === "LIVE") ? "READY" : this.running ? "CONNECTING" : "STOPPED"; }
+  private evaluateEngineStatus() {
+    const states = [...this.states.values()];
+    const ready = states.filter((state) => state.status === "LIVE" && state.historyLoaded && state.subscribed && state.contractSupported).length;
+    if (!this.running) this.engineStatus = "STOPPED";
+    else if (states.length > 0 && ready === states.length) { this.engineStatus = "READY"; this.message = "All configured indices are receiving live ticks."; }
+    else if (ready > 0) { this.engineStatus = "PARTIALLY_READY"; this.message = `${ready} of ${states.length} configured indices are live.`; }
+    else { this.engineStatus = "WAITING_FOR_DATA"; this.message = "Waiting for valid live market data."; }
+  }
 
   getAvailableIndices() { return this.registry.list(); }
   getEnabledIndices() { return this.registry.enabled(); }
@@ -281,7 +317,7 @@ export class IndicesDataEngine {
   getLatestCandle(symbol: string, timeframe: IndicesTimeframe) { return this.getCandles(symbol, timeframe).at(-1) ?? null; }
   getMarketState(symbol: string) { const snapshot = this.getMarketSnapshot(symbol); return snapshot?.marketState ?? null; }
   getDataHealth(symbol: string): IndicesDataHealth | null { const state = this.states.get(symbol); if (!state) return null; const age = state.latest ? Math.max(0, this.getServerTime() - state.latest.epoch * 1000) : null; return { state: state.status, quality: this.quality(state, age), dataAge: age, latencyMs: state.latest ? Math.max(0, state.latest.receivedAt - (state.latest.epoch * 1000 + this.serverTimeOffset)) : null, historyLoaded: state.historyLoaded, subscribed: state.subscribed, subscriptionId: state.subscriptionId, error: state.error }; }
-  isDataReady(symbol: string) { const health = this.getDataHealth(symbol); return health?.state === "LIVE" && health.historyLoaded && health.subscribed; }
+  isDataReady(symbol: string) { const state = this.states.get(symbol); const health = this.getDataHealth(symbol); return Boolean(state?.contractSupported && health?.state === "LIVE" && health.historyLoaded && health.subscribed); }
 
   getMarketSnapshot(symbol: string): IndicesMarketSnapshot | null {
     const state = this.states.get(symbol); if (!state) return null;
@@ -289,7 +325,7 @@ export class IndicesDataEngine {
     return Object.freeze({ symbol, timestamp: this.getServerTime(), price: state.latest?.price ?? null, tick: state.latest ? { ...state.latest } : null, recentTicks: Object.freeze(state.buffer.toArray(500)), candles: Object.freeze(marketState.candles), metadata: state.metadata, marketState, dataHealth: this.getDataHealth(symbol)! });
   }
 
-  getSnapshot(): IndicesEngineSnapshot { return { status: this.engineStatus, running: this.running, serverTimeOffset: this.serverTimeOffset, symbols: Object.fromEntries([...this.states.keys()].map((symbol) => [symbol, this.getMarketSnapshot(symbol)!])) }; }
+  getSnapshot(): IndicesEngineSnapshot { const symbols = Object.fromEntries([...this.states.keys()].map((symbol) => [symbol, this.getMarketSnapshot(symbol)!])); const readyCount = Object.values(symbols).filter((snapshot) => snapshot.marketState.ready).length; return { status: this.engineStatus, running: this.running, serverTimeOffset: Math.abs(this.serverTimeOffset) > 60_000 ? 0 : this.serverTimeOffset, configuredCount: this.registry.enabled().length, readyCount, message: this.message, symbols }; }
 
   private metrics(state: SymbolState) {
     const ticks = state.buffer.toArray(500); const prices = ticks.map((tick) => tick.price); const changes = prices.slice(1).map((price, index) => price - prices[index]!); const last = state.latest; const first = ticks[0]; const seconds = last && first ? Math.max(1, last.epoch - first.epoch) : 0; const standardDeviation = prices.length ? Math.sqrt(prices.reduce((sum, price) => sum + (price - prices.reduce((a, b) => a + b, 0) / prices.length) ** 2, 0) / prices.length) : null;

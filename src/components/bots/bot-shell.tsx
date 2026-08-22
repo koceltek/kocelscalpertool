@@ -13,32 +13,21 @@ import { useDerivLogout, useDerivSession } from "@/hooks/use-deriv-session";
 import { ERROR_MESSAGES } from "@/lib/deriv-types";
 import { BOT_LABEL, type BotType } from "@/bots/contracts";
 import { useBotRuntime } from "@/bots/bot-runtime";
-import { useForexData } from "@/bots/data/use-forex-data";
 import { useIndicesData } from "@/bots/indices-data";
 import { cn } from "@/lib/utils";
 
-type ForexPath = "/bots/forex/trade" | "/bots/forex/history" | "/bots/forex/settings";
-
 type IndicesPath = "/bots/indices/trade" | "/bots/indices/history" | "/bots/indices/settings";
 
-export type BotNavItem = { label: string; to: ForexPath | IndicesPath };
+export type BotNavItem = { label: string; to: IndicesPath };
 
 /** Final navigation: Trade, History, Settings only. */
-export const FOREX_NAV: BotNavItem[] = [
-  { label: "Trade", to: "/bots/forex/trade" },
-  { label: "History", to: "/bots/forex/history" },
-  { label: "Settings", to: "/bots/forex/settings" },
-];
-
 export const INDICES_NAV: BotNavItem[] = [
   { label: "Trade", to: "/bots/indices/trade" },
   { label: "History", to: "/bots/indices/history" },
   { label: "Settings", to: "/bots/indices/settings" },
 ];
 
-export function navFor(botType: BotType): BotNavItem[] {
-  return botType === "forex" ? FOREX_NAV : INDICES_NAV;
-}
+export function navFor(_botType: BotType): BotNavItem[] { return INDICES_NAV; }
 
 /**
  * Authenticated shell for a single bot environment. Phase 1 auth behaviour is
@@ -51,8 +40,7 @@ export function BotShell({ botType, tagline }: { botType: BotType; tagline: stri
   const logout = useDerivLogout();
   const [loggingOut, setLoggingOut] = useState(false);
   const { state: botState } = useBotRuntime(botType, status === "connected");
-  useForexData(botType === "forex" && (botState === "running" || botState === "starting"));
-  useIndicesData(botType === "indices" && (botState === "running" || botState === "starting"));
+  useIndicesData(botState === "running" || botState === "starting");
 
   const unauthenticated = authState !== null && !authState.authenticated;
 
@@ -71,7 +59,7 @@ export function BotShell({ botType, tagline }: { botType: BotType; tagline: stri
   if (isLoading) {
     return (
       <main className="grid min-h-dvh place-items-center px-5">
-        <LoadingSpinner label={`Loading ${BOT_LABEL[botType]}...`} />
+        <LoadingSpinner label={`Loading ${BOT_LABEL}...`} />
       </main>
     );
   }
@@ -93,9 +81,9 @@ export function BotShell({ botType, tagline }: { botType: BotType; tagline: stri
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border py-4">
           <div className="min-w-0">
             <Button asChild variant="ghost" size="sm" className="-ml-2 h-8 text-muted-foreground">
-              <Link to="/dashboard">
+              <Link to="/bots/indices/trade">
                 <ArrowLeft className="size-4" aria-hidden="true" />
-                Bot selection
+                Indices bot
               </Link>
             </Button>
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Balance</p>
@@ -103,7 +91,7 @@ export function BotShell({ botType, tagline }: { botType: BotType; tagline: stri
               {formatBalance(account)}
             </p>
             <h1 className="mt-1 truncate text-sm font-bold uppercase tracking-[0.18em] text-foreground sm:text-base">
-              {BOT_LABEL[botType]}
+              {BOT_LABEL}
             </h1>
             <p className="text-xs text-muted-foreground">{tagline}</p>
           </div>
@@ -117,7 +105,7 @@ export function BotShell({ botType, tagline }: { botType: BotType; tagline: stri
 
         <div className="flex gap-6 pb-24 lg:pb-8">
           <nav
-            aria-label={`${BOT_LABEL[botType]} sections`}
+            aria-label={`${BOT_LABEL} sections`}
             className="hidden w-52 shrink-0 flex-col gap-1 py-6 lg:flex"
           >
             {nav.map((item) => (
@@ -140,7 +128,7 @@ export function BotShell({ botType, tagline }: { botType: BotType; tagline: stri
       </div>
 
       <nav
-        aria-label={`${BOT_LABEL[botType]} sections`}
+        aria-label={`${BOT_LABEL} sections`}
         className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 gap-1 border-t border-border bg-background/95 px-2 py-2 backdrop-blur lg:hidden"
       >
         {nav.map((item) => (
