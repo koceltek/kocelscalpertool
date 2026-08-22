@@ -41,6 +41,8 @@ export const FOREX_STRATEGY_CONFIG = {
   evaluationIntervalMs: 2_000,
   /** Suggested contract duration context handed to Phase 3C (seconds). */
   suggestedDurationSeconds: 180,
+  /** Profit objective handed to the Forex exit engine. */
+  targetProfit: 0.15,
 } as const;
 
 export type ForexStrategyConfig = typeof FOREX_STRATEGY_CONFIG;

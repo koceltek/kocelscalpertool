@@ -1,0 +1,13 @@
+import { useEffect, useState } from "react";
+import { indicesDataEngine } from "./engine";
+
+export function useIndicesData(active = false) {
+  const [snapshot, setSnapshot] = useState(() => indicesDataEngine.getSnapshot());
+  useEffect(() => {
+    const remove = indicesDataEngine.onEvent(() => setSnapshot(indicesDataEngine.getSnapshot()));
+    if (active) void indicesDataEngine.start().catch(() => setSnapshot(indicesDataEngine.getSnapshot()));
+    return remove;
+  }, [active]);
+  useEffect(() => { if (active) return; if (indicesDataEngine.isRunning) indicesDataEngine.stop(); }, [active]);
+  return { ...snapshot, engine: indicesDataEngine, refresh: () => setSnapshot(indicesDataEngine.getSnapshot()) };
+}

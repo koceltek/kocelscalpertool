@@ -1,5 +1,25 @@
 # Kocel Scalper Bot
 
+## Current Build
+
+The current application is the integrated Kocel Rise & Fall Bot with two isolated bot environments:
+
+- Forex Scalper Bot with live Forex market data, Forex-specific strategy evaluation, risk checks, Deriv proposals/buys, open-contract monitoring, reconciliation, and bot-specific history.
+- Indices Scalper Bot with live Synthetic Indices tick data, Indices-specific strategy evaluation, risk checks, Deriv proposals/buys, open-contract monitoring, reconciliation, and bot-specific history.
+- Deriv OAuth authentication with account, currency, balance, demo/real account identification, logout, reconnection states, and account switching.
+- Final bot navigation limited to Trade, History, and Settings for each bot.
+- Independent settings, execution locks, risk state, protection limits, cooldowns, and history for Forex and Indices.
+- Persistent Indices daily P/L, consecutive-loss, protection, and trading-day state.
+- Duplicate-execution protection and active-contract recovery after reconnection or bot restart.
+- Stop behavior that prevents new entries while continuing to monitor and reconcile an already-open contract.
+- Responsive bot selection and trading interfaces with authoritative Deriv balance updates.
+
+The application does not use Martingale or loss chasing, does not fabricate connected-market data or trade results, and does not expose strategy internals as user-facing analysis pages. A stopped bot remains stopped after refresh or restart until the user explicitly starts it.
+
+### Validation
+
+The current source passes editor diagnostics, ESLint, and the production Vite build. Live Deriv execution and real-account deployment must be validated separately using a Deriv demo account and production environment configuration.
+
 MASTER IMPLEMENTATION PROMPT — KOCEL RISE & FALL BOT
 
 PHASE 1: UI FOUNDATION + DERIV LOGIN & AUTHENTICATION

@@ -148,23 +148,9 @@ function DashboardPage() {
             />
           </div>
 
-          <Card className="border-dashed border-border bg-surface p-5">
-            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
-              Build status
-            </p>
-            <h2 className="mt-2 text-base font-semibold text-foreground">
-              Interface only — no trading logic
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Each bot has Trade, History and Settings only. Analysis runs internally and is never
-              shown. Live market data, signal generation and trade execution arrive in later
-              phases, so starting a bot cannot place a real trade yet.
-            </p>
-
-            <Button variant="outline" size="sm" className="mt-4 w-fit" onClick={refresh}>
-              Refresh connection
-            </Button>
-          </Card>
+          <Button variant="outline" size="sm" className="w-fit" onClick={refresh}>
+            Refresh connection
+          </Button>
         </main>
       </div>
     </div>

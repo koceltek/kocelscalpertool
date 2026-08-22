@@ -144,3 +144,46 @@ export async function fetchDerivAccounts(
     .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
     .map(normalizeAccount);
 }
+
+type DerivMessage = Record<string, unknown>;
+
+/**
+ * Executes one authenticated Deriv WebSocket request. The access token never
+ * leaves this server-only module. Each financial operation uses a fresh
+ * request so a timeout cannot be mistaken for a successful buy or sell.
+ */
+export async function requestAuthenticatedDeriv(
+  accessToken: string,
+  payload: DerivMessage,
+): Promise<DerivMessage> {
+  const socket = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
+  let nextRequestId = 1;
+  const request = (body: DerivMessage) => new Promise<DerivMessage>((resolve, reject) => {
+    const reqId = nextRequestId++;
+    const timer = setTimeout(() => reject(new DerivError("API_ERROR", "Deriv request timed out.")), 15_000);
+    const handler = (event: MessageEvent) => {
+      let message: DerivMessage;
+      try { message = JSON.parse(String(event.data)) as DerivMessage; } catch { return; }
+      if (message["req_id"] !== reqId) return;
+      clearTimeout(timer); socket.removeEventListener("message", handler);
+      const error = message["error"] as DerivMessage | undefined;
+      if (error) reject(new DerivError("API_ERROR", String(error["message"] ?? error["code"] ?? "Deriv API error")));
+      else resolve(message);
+    };
+    socket.addEventListener("message", handler);
+    socket.send(JSON.stringify({ ...body, req_id: reqId }));
+  });
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new DerivError("API_ERROR", "Deriv connection timed out.")), 15_000);
+      socket.addEventListener("open", () => { clearTimeout(timer); resolve(); }, { once: true });
+      socket.addEventListener("error", () => { clearTimeout(timer); reject(new DerivError("API_ERROR", "Deriv connection error.")); }, { once: true });
+    });
+    const authorization = await request({ authorize: accessToken });
+    if (!authorization["authorize"]) throw new DerivError("AUTH_FAILED", "Deriv authorization failed.");
+    return await request(payload);
+  } finally {
+    socket.close();
+  }
+}

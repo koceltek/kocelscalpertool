@@ -203,12 +203,12 @@ export function BotSettingsForm({
 
       <Panel
         title="Automation"
-        description="Auto-trading requires the strategy and execution engines, which arrive in later phases."
+        description={botType === "indices" ? "When enabled, the Indices strategy may request trades after Start and all risk checks pass." : "Auto-trading requires the Forex execution phase."}
       >
         <ToggleRow
           id={`auto-${botType}`}
           label="Auto-trading"
-          hint="Saved as a preference only — no trade can be placed in this build."
+          hint={botType === "indices" ? "Trades remain subject to signal, account, contract and risk validation." : "Saved as a preference until the Forex execution phase is enabled."}
           checked={settings.autoTrading}
           onChange={(checked) => {
             if (checked) {
@@ -260,8 +260,8 @@ export function BotSettingsForm({
           <AlertDialogHeader>
             <AlertDialogTitle>Enable auto-trading preference?</AlertDialogTitle>
             <AlertDialogDescription>
-              No trades can be placed yet: the strategy and execution engines are not part of this
-              build. This only stores your preference for when they are enabled.
+              Indices auto-trading can place real or demo trades after Start when all safety checks
+              pass. Your configured stake is never increased automatically.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -2,25 +2,33 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { BotPageHeading } from "@/components/bots/bot-shell";
 import { BotControls } from "@/components/bots/bot-controls";
-import {
-  BotActivityPanel,
-  CurrentTradePanel,
-  DailyStatsPanel,
-} from "@/components/bots/bot-activity";
+import { DataStatusBadge } from "@/components/bots/data-status-badge";
 import { Metric, Panel } from "@/components/bots/panel";
 import { useBotRuntime } from "@/bots/bot-runtime";
 import { useBotSettings } from "@/bots/use-bot-settings";
 import { useDerivSession } from "@/hooks/use-deriv-session";
-import { marketLabel } from "@/bots/markets";
+import { useForexData } from "@/bots/data/use-forex-data";
+import { useForexStrategy } from "@/bots/strategy/use-forex-strategy";
+import { useForexExecution } from "@/bots/forex-execution/use-forex-execution";
 
 export const Route = createFileRoute("/bots/forex/trade")({
   component: ForexTrade,
 });
 
 function ForexTrade() {
-  const { status } = useDerivSession();
+  const { status, account, refresh } = useDerivSession();
   const { settings } = useBotSettings("forex");
-  const { state, snapshot, busy, start, stop } = useBotRuntime("forex", status === "connected");
+  const { state, busy, start, stop } = useBotRuntime("forex", status === "connected");
+  const data = useForexData(state === "running" || state === "starting");
+  const execution = useForexExecution(
+    state === "running",
+    settings.autoTrading,
+    settings,
+    account?.balance ?? null,
+    account?.currency ?? "",
+    () => void refresh(),
+  );
+  useForexStrategy(state === "running", settings.selectedMarkets, execution.executeSignal);
 
   return (
     <div className="space-y-5">
@@ -36,27 +44,43 @@ function ForexTrade() {
         settings={settings}
         onStart={start}
         onStop={stop}
+        accountType={account?.accountType}
       />
 
-      <DailyStatsPanel snapshot={snapshot} />
-      <BotActivityPanel snapshot={snapshot} />
-      <CurrentTradePanel snapshot={snapshot} marketLabel="Pair" durationLabel="Duration" />
-
-      <Panel title="Active configuration" description="Read from this bot's own settings.">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Metric label="Stake" value={`$${settings.stake.toFixed(2)}`} />
-          <Metric label="Trading mode" value={settings.tradingMode} />
-          <Metric label="Daily loss limit" value={`$${settings.dailyLossLimit.toFixed(2)}`} />
-          <Metric label="Cooldown" value={`${settings.cooldownSeconds}s`} />
+      <DataStatusBadge snapshot={data} active={state === "running" || state === "starting"} />
+      <Panel title="Account" description="Authenticated Deriv account balance.">
+        <div className="grid grid-cols-2 gap-3">
           <Metric
-            label="Markets"
-            value={settings.selectedMarkets.map((s) => marketLabel("forex", s)).join(", ")}
-            className="col-span-2"
+            label="Balance"
+            value={
+              account?.balance === null || account?.balance === undefined
+                ? "--"
+                : `${account.currency ?? ""} ${account.balance.toFixed(2)}`
+            }
           />
-          <Metric label="Auto-trading" value={settings.autoTrading ? "On" : "Off"} />
-          <Metric label="Capital protection" value={settings.capitalProtection ? "On" : "Off"} />
+          <Metric label="Account" value={account?.accountType ?? "UNKNOWN"} />
         </div>
       </Panel>
+      {execution.status.activeTrade ? (
+        <Panel title="Current trade" description="Open Forex contract management.">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Metric label="Market" value={execution.status.activeTrade.symbol} />
+            <Metric label="Direction" value={execution.status.activeTrade.direction} />
+            <Metric
+              label="Stake"
+              value={`${account?.currency ?? ""} ${execution.status.activeTrade.stake.toFixed(2)}`}
+            />
+            <Metric
+              label="Current P/L"
+              value={
+                execution.status.activeTrade.currentProfit === null
+                  ? "--"
+                  : `${execution.status.activeTrade.currentProfit >= 0 ? "+" : "-"}${account?.currency ?? ""} ${Math.abs(execution.status.activeTrade.currentProfit).toFixed(2)}`
+              }
+            />
+          </div>
+        </Panel>
+      ) : null}
     </div>
   );
 }

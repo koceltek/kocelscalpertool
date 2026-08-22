@@ -36,11 +36,7 @@ export const ACTIVITY_LABEL: Record<BotActivity, string> = {
   cooldown: "Cooldown active",
 };
 
-/**
- * Simplified engine → UI contract. Later phases fill these fields from the
- * internal scanner / strategy / execution engines; the UI never sees indicator
- * values or strategy internals.
- */
+/** The deliberately small engine-to-UI contract; strategy internals stay hidden. */
 export interface BotRuntimeSnapshot {
   botType: BotType;
   state: BotRunState;
@@ -80,10 +76,9 @@ export function emptySnapshot(botType: BotType, state: BotRunState = "stopped"):
 }
 
 /**
- * Bot-scoped runtime controller.
- *
- * Phase 2 is UI-only: start/stop transition the local state model and never
- * touch the Deriv API, so no trade can be opened or closed here.
+ * Bot-scoped lifecycle gate. Domain engines are started by their bot-specific
+ * hooks, while this controller owns the user-visible lifecycle and connection
+ * safety state.
  */
 export function useBotRuntime(botType: BotType, connected: boolean) {
   const [state, setState] = useState<BotRunState>("stopped");
@@ -116,10 +111,11 @@ export function useBotRuntime(botType: BotType, connected: boolean) {
   }, [connected]);
 
   const stop = useCallback(() => {
+    if (state === "stopped" || state === "stopping") return;
     setState("stopping");
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setState("stopped"), 400);
-  }, []);
+  }, [state]);
 
   const snapshot = emptySnapshot(botType, state);
   const busy = state === "starting" || state === "stopping";

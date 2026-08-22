@@ -41,6 +41,7 @@ export function BotControls({
   settings,
   onStart,
   onStop,
+  accountType,
 }: {
   botType: BotType;
   state: BotRunState;
@@ -48,6 +49,7 @@ export function BotControls({
   settings: BotSettings;
   onStart: () => void;
   onStop: () => void;
+  accountType?: "DEMO" | "REAL" | "UNKNOWN";
 }) {
   const [confirmStart, setConfirmStart] = useState(false);
   const [confirmStop, setConfirmStop] = useState(false);
@@ -90,7 +92,11 @@ export function BotControls({
       <p className="max-w-md text-xs leading-relaxed text-muted-foreground">
         {state === "disconnected"
           ? "Reconnect your Deriv account before starting this bot."
-          : "The trading engine arrives in a later phase, so starting the bot cannot place a real trade yet."}
+          : botType === "indices"
+            ? accountType === "REAL"
+              ? "REAL account: Start may place real-funds trades when auto-trading is enabled."
+              : "Start begins scanning; trades require auto-trading and every safety check to pass."
+            : "Start begins scanning; trades require every safety check to pass."}
       </p>
 
       <AlertDialog open={confirmStart} onOpenChange={setConfirmStart}>
@@ -98,8 +104,13 @@ export function BotControls({
           <AlertDialogHeader>
             <AlertDialogTitle>Start {BOT_LABEL[botType]}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Once the trading engine is enabled, the bot will automatically place Rise / Fall
-              trades using this bot&apos;s own settings. No trade can be placed in this build.
+              {botType === "indices" && accountType === "REAL"
+                ? "You are connected to a REAL Deriv account. Trading will use real funds when auto-trading is enabled."
+                : botType === "indices"
+                  ? "You are connected to a DEMO account. Trading will use demo funds when auto-trading is enabled."
+                  : accountType === "REAL"
+                    ? "You are connected to a REAL Deriv account. Trading will use real funds."
+                    : "You are connected to a DEMO Deriv account. Trading will use demo funds."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="grid grid-cols-1 gap-2 rounded-lg border border-border bg-surface p-3 text-xs sm:grid-cols-3">
