@@ -29,6 +29,7 @@ export function MarketSelector({
             <Checkbox
               id={id}
               checked={isChecked}
+              disabled={isChecked && selected.length <= 3}
               onCheckedChange={(value) => toggle(market.symbol, value === true)}
             />
             <Label htmlFor={id} className="flex-1 cursor-pointer flex-col items-start gap-0.5">

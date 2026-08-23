@@ -42,10 +42,18 @@ export function normalizeIndex(raw: RawSymbol): IndicesSymbol | null {
 
 export class IndicesSymbolRegistry {
   private symbols = new Map<string, IndicesSymbol>();
-  update(rawSymbols: RawSymbol[]) {
+  update(rawSymbols: RawSymbol[], allowedSymbols = INDICES_ALLOWED_SYMBOLS) {
     for (const raw of rawSymbols) {
       const symbol = normalizeIndex(raw);
       if (symbol) this.symbols.set(symbol.symbol, symbol);
+    }
+    const configured = new Set(allowedSymbols);
+    for (const [symbol, value] of this.symbols) {
+      const volatilityNumber = value.displayName.match(/volatility\s*(\d+)/i)?.[1];
+      const matchesConfigured = configured.has(symbol) || Boolean(
+        volatilityNumber && [...configured].some((allowed) => allowed.match(/(?:R_|1HZ)(\d+)/i)?.[1] === volatilityNumber),
+      );
+      this.symbols.set(symbol, { ...value, enabled: matchesConfigured });
     }
     return this.list();
   }

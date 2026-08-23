@@ -27,7 +27,7 @@ function IndicesTrade() {
   const { status, account, refresh } = useDerivSession();
   const { settings } = useBotSettings();
   const { state, snapshot, busy, start, stop, fail, ready } = useBotRuntime("indices", status === "connected");
-  const indicesData = useIndicesData(state === "running" || state === "starting");
+  const indicesData = useIndicesData(state === "running" || state === "starting", settings.selectedMarkets);
   const execution = useIndicesExecution(
     state === "running",
     settings.autoTrading,
@@ -49,7 +49,6 @@ function IndicesTrade() {
 
   const startIndices = () => {
     start();
-    void indicesData.engine.start().catch(() => undefined);
   };
 
   const stopIndices = () => {
@@ -75,7 +74,7 @@ function IndicesTrade() {
 
       <Panel title="Market data" description="Live Synthetic Indices data only. Strategy and execution are separate phases.">
         {indicesData.status === "ERROR" ? (
-          <ErrorAlert title="Indices market data error" message="Deriv did not return usable market data. Check the connection and try starting again." />
+          <ErrorAlert title="Indices market data error" message={indicesData.message ?? "Deriv did not return usable market data. Check the connection and try starting again."} />
         ) : null}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {indicesData.engine.getEnabledIndices().map((metadata) => {

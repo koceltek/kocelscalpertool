@@ -13,7 +13,7 @@ export class IndicesProposalEngine {
   async proposal(input: { symbol: string; direction: "RISE" | "FALL"; stake: number; currency: string; duration: number; durationUnit: string }) {
     const contracts = await this.contracts(input.symbol);
     const available = JSON.stringify(contracts).toUpperCase();
-    const requested = input.direction === "RISE" ? ["CALL", "RISE"] : ["PUT", "FALL"];
+    const requested = input.direction === "RISE" ? ["CALL"] : ["PUT"];
     const contractType = requested.find((type) => available.includes(type));
     if (!contractType) throw new Error("CONTRACT_UNAVAILABLE");
     return this.request("proposal", { proposal: 1, amount: input.stake, basis: "stake", contract_type: contractType, currency: input.currency, duration: input.duration, duration_unit: input.durationUnit, underlying_symbol: input.symbol });
@@ -69,7 +69,7 @@ export class IndicesExecutionEngine {
       this.activeTrade = { tradeId: `${signal.signalId}:${contractId}`, contractId, symbol: signal.symbol, direction: signal.direction, stake: risk.stake, buyPrice: checked.askPrice, exitPrice: null, profit: null, result: "OPEN", openedAt: Date.now(), closedAt: null, strategyVersion: signal.strategyVersion, signalId: signal.signalId, setupType: signal.setupType, confidence: signal.confidence, status: "OPEN", currentValue: checked.askPrice, currentProfit: 0 };
       saveIndicesTrade(this.activeTrade); this.emit({ type: "BUY_CONFIRMED", trade: this.activeTrade }); this.emit({ type: "CONTRACT_OPENED", trade: this.activeTrade });
       await this.monitorTrade(signal); return this.activeTrade;
-    } catch (error) { this.message = "Trade could not be placed."; return null; }
+    } catch (error) { this.message = error instanceof Error ? `Trade failed: ${error.message}` : "Trade could not be placed."; return null; }
     finally { this.executionLock = false; }
   }
   async recover() { const response = await this.request("portfolio", { portfolio: 1 }); const contracts = Array.isArray(response["contracts"]) ? response["contracts"] : []; const open = contracts[0] as Record<string, unknown> | undefined; if (open?.["contract_id"]) this.activeTrade = { tradeId: `recovered:${open["contract_id"]}`, contractId: String(open["contract_id"]), symbol: String(open["underlying"] ?? open["symbol"]), direction: String(open["contract_type"]).toUpperCase().includes("PUT") ? "FALL" : "RISE", stake: number(open["buy_price"]) ?? 0, buyPrice: number(open["buy_price"]) ?? 0, exitPrice: null, profit: number(open["profit"]), result: "OPEN", openedAt: number(open["purchase_time"]) ? Number(open["purchase_time"]) * 1000 : Date.now(), closedAt: null, strategyVersion: "recovered", signalId: "recovered", setupType: "recovered", confidence: 0, status: "OPEN", currentValue: number(open["bid_price"]), currentProfit: number(open["profit"]) }; return this.activeTrade; }

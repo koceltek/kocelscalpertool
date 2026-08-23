@@ -115,6 +115,7 @@ export class IndicesDataEngine {
   private running = false;
   private serverTimeOffset = 0;
   private message: string | null = null;
+  private configuredSymbols = [...INDICES_ALLOWED_SYMBOLS];
 
   constructor(provider: MarketDataProvider = new DerivIndicesDataProvider()) { this.provider = provider; }
 
@@ -123,8 +124,9 @@ export class IndicesDataEngine {
   getServerTime() { return Date.now() + this.serverTimeOffset; }
   getServerTimeOffset() { return this.serverTimeOffset; }
 
-  async start() {
+  async start(configuredSymbols = INDICES_ALLOWED_SYMBOLS) {
     if (this.running) return;
+    this.configuredSymbols = [...configuredSymbols].slice(0, 3);
     if (this.startPromise) return this.startPromise;
     this.startPromise = this.startInternal().finally(() => { this.startPromise = null; });
     return this.startPromise;
@@ -139,9 +141,13 @@ export class IndicesDataEngine {
       const response = await this.provider.request({ active_symbols: "brief", product_type: "basic" });
       const rawSymbols = Array.isArray(response["active_symbols"]) ? response["active_symbols"] as Json[] : [];
       this.registry.clear();
-      for (const symbol of this.registry.update(rawSymbols)) this.emit({ type: "INDEX_DISCOVERED", payload: symbol });
+      if (rawSymbols.length === 0) throw new Error("Synthetic index discovery returned no markets.");
+      for (const symbol of this.registry.update(rawSymbols, this.configuredSymbols)) this.emit({ type: "INDEX_DISCOVERED", payload: symbol });
       await this.refreshTradingTimes();
       const enabled = this.registry.enabled();
+      if (enabled.length !== this.configuredSymbols.length) {
+        throw new Error(`Unable to resolve ${this.configuredSymbols.length} configured synthetic indices.`);
+      }
       this.engineStatus = "LOADING_DATA"; this.message = "Validating Rise/Fall contracts and loading history...";
       for (const metadata of enabled) this.ensureState(metadata);
       await Promise.allSettled(enabled.map((metadata) => this.validateContracts(metadata)));
@@ -227,6 +233,7 @@ export class IndicesDataEngine {
       const contractTypes = new Set<string>();
       const collect = (value: unknown): void => {
         if (Array.isArray(value)) { value.forEach(collect); return; }
+        if (typeof value === "string") { contractTypes.add(value.toUpperCase()); return; }
         if (!value || typeof value !== "object") return;
         const record = value as Json;
         const type = asText(record["contract_type"]);
@@ -325,7 +332,7 @@ export class IndicesDataEngine {
     return Object.freeze({ symbol, timestamp: this.getServerTime(), price: state.latest?.price ?? null, tick: state.latest ? { ...state.latest } : null, recentTicks: Object.freeze(state.buffer.toArray(500)), candles: Object.freeze(marketState.candles), metadata: state.metadata, marketState, dataHealth: this.getDataHealth(symbol)! });
   }
 
-  getSnapshot(): IndicesEngineSnapshot { const symbols = Object.fromEntries([...this.states.keys()].map((symbol) => [symbol, this.getMarketSnapshot(symbol)!])); const readyCount = Object.values(symbols).filter((snapshot) => snapshot.marketState.ready).length; return { status: this.engineStatus, running: this.running, serverTimeOffset: Math.abs(this.serverTimeOffset) > 60_000 ? 0 : this.serverTimeOffset, configuredCount: this.registry.enabled().length, readyCount, message: this.message, symbols }; }
+  getSnapshot(): IndicesEngineSnapshot { const symbols = Object.fromEntries([...this.states.keys()].map((symbol) => [symbol, this.getMarketSnapshot(symbol)!])); const readyCount = Object.values(symbols).filter((snapshot) => snapshot.marketState.ready).length; return { status: this.engineStatus, running: this.running, serverTimeOffset: Math.abs(this.serverTimeOffset) > 60_000 ? 0 : this.serverTimeOffset, configuredCount: this.configuredSymbols.length, readyCount, message: this.message, symbols }; }
 
   private metrics(state: SymbolState) {
     const ticks = state.buffer.toArray(500); const prices = ticks.map((tick) => tick.price); const changes = prices.slice(1).map((price, index) => price - prices[index]!); const last = state.latest; const first = ticks[0]; const seconds = last && first ? Math.max(1, last.epoch - first.epoch) : 0; const standardDeviation = prices.length ? Math.sqrt(prices.reduce((sum, price) => sum + (price - prices.reduce((a, b) => a + b, 0) / prices.length) ** 2, 0) / prices.length) : null;

@@ -6,7 +6,7 @@ export const TRADING_MODES = ["conservative", "normal", "aggressive"] as const;
 export type TradingMode = (typeof TRADING_MODES)[number];
 
 export const botSettingsSchema = z.object({
-  selectedMarkets: z.array(z.string().min(1)).min(1, "Select at least one market"),
+  selectedMarkets: z.array(z.string().min(1)).length(3, "Select all three indices"),
   tradingMode: z.enum(TRADING_MODES),
   stake: z.number().positive("Stake must be greater than 0").max(100000),
   maxLossPerTrade: z.number().positive("Maximum loss must be greater than 0").max(100000),
