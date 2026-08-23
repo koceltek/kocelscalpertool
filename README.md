@@ -28,3 +28,5 @@ npm run dev
 ```
 
 Required server configuration includes `KOCEL_SESSION_SECRET`. Deriv client settings can be provided with `VITE_DERIV_CLIENT_ID`, `VITE_DERIV_REDIRECT_URI`, and `VITE_DERIV_APP_ID`.
+
+Copy `.env.example` to `.env.local` and replace `VITE_DERIV_APP_ID` with the app ID registered for the OAuth callback URL. Do not commit `.env.local`.

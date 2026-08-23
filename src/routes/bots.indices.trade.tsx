@@ -56,6 +56,18 @@ function IndicesTrade() {
     stop();
   };
 
+  const lifecycleLabel: Record<typeof indicesData.status, string> = {
+    STOPPED: "STOPPED",
+    INITIALIZING: "CONNECTING",
+    CONNECTING: "CONNECTING",
+    LOADING_DATA: "LOADING DATA",
+    SUBSCRIBING: "SUBSCRIBING",
+    READY: "READY",
+    PARTIALLY_READY: "PARTIALLY READY",
+    WAITING_FOR_DATA: "WAITING FOR DATA",
+    ERROR: "ERROR",
+  };
+
   return (
     <div className="space-y-5">
       <BotPageHeading
@@ -73,6 +85,10 @@ function IndicesTrade() {
       />
 
       <Panel title="Market data" description="Live Synthetic Indices data only. Strategy and execution are separate phases.">
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-muted/30 px-3 py-2">
+          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Lifecycle</span>
+          <span className="text-sm font-bold text-foreground">{lifecycleLabel[indicesData.status]}</span>
+        </div>
         {indicesData.status === "ERROR" ? (
           <ErrorAlert title="Indices market data error" message={indicesData.message ?? "Deriv did not return usable market data. Check the connection and try starting again."} />
         ) : null}
@@ -81,7 +97,7 @@ function IndicesTrade() {
             const market = indicesData.symbols[metadata.symbol];
             const health = market?.dataHealth;
             const live = health?.state === "LIVE" && health.dataAge !== null && health.dataAge <= 10_000;
-            const statusLabel = live ? "LIVE" : health?.state === "STALE" ? "STALE" : health?.state === "INITIALIZING" || health?.state === "LOADING_HISTORY" ? "CONNECTING" : "OFFLINE";
+            const statusLabel = live ? "LIVE" : health?.state === "STALE" ? "STALE" : health?.state === "INITIALIZING" || health?.state === "LOADING_HISTORY" ? lifecycleLabel[indicesData.status] : "OFFLINE";
             return (
               <div key={metadata.symbol} className="rounded-lg border border-border/70 bg-surface px-3 py-3">
                 <div className="flex items-center justify-between gap-2">

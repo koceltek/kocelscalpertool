@@ -1,4 +1,6 @@
 import type { IndicesMarketSnapshot } from "@/bots/indices-data";
+import { contractTypesFromResponse } from "@/bots/indices-data";
+import { dataLogger } from "@/bots/data/logger";
 import type { StrategySignal } from "@/bots/indices-strategy";
 import { loadIndicesTrades, saveIndicesTrade } from "./history";
 import { IndicesRiskEngine } from "./risk";
@@ -12,10 +14,11 @@ export class IndicesProposalEngine {
   async contracts(symbol: string) { return this.request("contracts_for", { contracts_for: symbol }); }
   async proposal(input: { symbol: string; direction: "RISE" | "FALL"; stake: number; currency: string; duration: number; durationUnit: string }) {
     const contracts = await this.contracts(input.symbol);
-    const available = JSON.stringify(contracts).toUpperCase();
+    const available = contractTypesFromResponse(contracts);
     const requested = input.direction === "RISE" ? ["CALL"] : ["PUT"];
-    const contractType = requested.find((type) => available.includes(type));
+    const contractType = requested.find((type) => available.has(type));
     if (!contractType) throw new Error("CONTRACT_UNAVAILABLE");
+    dataLogger.info("INDICES EXECUTION", "[PROPOSAL] Requesting proposal", { symbol: input.symbol, contractType });
     return this.request("proposal", { proposal: 1, amount: input.stake, basis: "stake", contract_type: contractType, currency: input.currency, duration: input.duration, duration_unit: input.durationUnit, underlying_symbol: input.symbol });
   }
   validate(response: Record<string, unknown>, input: { symbol: string; stake: number; currency: string }) {
@@ -65,6 +68,7 @@ export class IndicesExecutionEngine {
       const checked = this.proposal.validate(response, { symbol: signal.symbol, stake: risk.stake, currency }); this.emit({ type: "PROPOSAL_RECEIVED", signal });
       this.message = "Buying"; this.emit({ type: "BUY_REQUESTED", signal });
       const bought = await this.request("buy", { buy: checked.id, price: checked.askPrice }); const buy = (bought["buy"] ?? {}) as Record<string, unknown>; const contractId = String(buy["contract_id"] ?? "");
+      dataLogger.info("INDICES EXECUTION", "[BUY] Buy response received", { symbol: signal.symbol, contractId: contractId || null });
       if (!contractId) throw new Error("BUY_FAILED");
       this.activeTrade = { tradeId: `${signal.signalId}:${contractId}`, contractId, symbol: signal.symbol, direction: signal.direction, stake: risk.stake, buyPrice: checked.askPrice, exitPrice: null, profit: null, result: "OPEN", openedAt: Date.now(), closedAt: null, strategyVersion: signal.strategyVersion, signalId: signal.signalId, setupType: signal.setupType, confidence: signal.confidence, status: "OPEN", currentValue: checked.askPrice, currentProfit: 0 };
       saveIndicesTrade(this.activeTrade); this.emit({ type: "BUY_CONFIRMED", trade: this.activeTrade }); this.emit({ type: "CONTRACT_OPENED", trade: this.activeTrade });

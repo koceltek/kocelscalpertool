@@ -28,6 +28,7 @@ type SymbolState = {
   error: string | null;
   wasStale: boolean;
   contractSupported: boolean;
+  firstLiveTick: boolean;
 };
 
 const INDEX_SCOPE = "INDICES DATA";
@@ -39,6 +40,25 @@ const asBool = (value: unknown, fallback: boolean) => {
   if (typeof value === "string") return value !== "0" && value.toLowerCase() !== "false";
   return fallback;
 };
+
+export function contractTypesFromResponse(response: Json): Set<string> {
+  const contractTypes = new Set<string>();
+  const collect = (value: unknown, key?: string): void => {
+    if (key === "contract_type" && typeof value === "string") {
+      contractTypes.add(value.toUpperCase());
+      return;
+    }
+    if (key === "contract_types" && Array.isArray(value)) {
+      value.forEach((item) => { if (typeof item === "string") contractTypes.add(item.toUpperCase()); });
+      return;
+    }
+    if (Array.isArray(value)) { value.forEach((item) => collect(item)); return; }
+    if (!value || typeof value !== "object") return;
+    for (const [childKey, child] of Object.entries(value as Json)) collect(child, childKey);
+  };
+  collect(response);
+  return contractTypes;
+}
 
 export interface MarketDataProvider {
   connect(): Promise<void>;
@@ -222,7 +242,7 @@ export class IndicesDataEngine {
   private ensureState(metadata: IndicesSymbol) {
     const state = this.states.get(metadata.symbol);
     if (state) { state.metadata = metadata; return state; }
-    const created: SymbolState = { metadata, buffer: new IndicesTickBuffer(INDICES_TICK_BUFFER_SIZE), candles: new IndicesCandleEngine(metadata.symbol), latest: null, historyLoaded: false, subscribed: false, subscriptionId: null, status: "INITIALIZING", error: null, wasStale: false, contractSupported: false };
+    const created: SymbolState = { metadata, buffer: new IndicesTickBuffer(INDICES_TICK_BUFFER_SIZE), candles: new IndicesCandleEngine(metadata.symbol), latest: null, historyLoaded: false, subscribed: false, subscriptionId: null, status: "INITIALIZING", error: null, wasStale: false, contractSupported: false, firstLiveTick: false };
     this.states.set(metadata.symbol, created); return created;
   }
 
@@ -230,17 +250,7 @@ export class IndicesDataEngine {
     const state = this.ensureState(metadata);
     try {
       const response = await this.provider.request({ contracts_for: metadata.symbol });
-      const contractTypes = new Set<string>();
-      const collect = (value: unknown): void => {
-        if (Array.isArray(value)) { value.forEach(collect); return; }
-        if (typeof value === "string") { contractTypes.add(value.toUpperCase()); return; }
-        if (!value || typeof value !== "object") return;
-        const record = value as Json;
-        const type = asText(record["contract_type"]);
-        if (type) contractTypes.add(type.toUpperCase());
-        Object.values(record).forEach(collect);
-      };
-      collect(response);
+      const contractTypes = contractTypesFromResponse(response);
       state.contractSupported = contractTypes.has("CALL") && contractTypes.has("PUT");
       if (!state.contractSupported) state.error = "Rise/Fall contracts are unavailable for this index.";
     } catch (error) {
@@ -287,7 +297,8 @@ export class IndicesDataEngine {
 
   private acceptTick(tick: IndicesTick) {
     const state = this.states.get(tick.symbol); if (!state || !state.buffer.append(tick)) return;
-    const wasReady = state.status === "LIVE"; state.latest = tick; state.status = "LIVE"; state.error = null;
+    const wasReady = state.firstLiveTick; state.latest = tick; state.firstLiveTick = true; state.status = "LIVE"; state.error = null;
+    dataLogger.info(INDEX_SCOPE, "[TICK] Live tick accepted", { symbol: tick.symbol, price: tick.price, epoch: tick.epoch });
     const events = state.candles.add(tick); this.emit({ type: "TICK_RECEIVED", payload: tick });
     for (const candle of events.opened) this.emit({ type: "CANDLE_OPENED", payload: candle });
     for (const candle of events.updated) this.emit({ type: "CANDLE_UPDATED", payload: candle });
@@ -308,7 +319,7 @@ export class IndicesDataEngine {
   }
   private evaluateEngineStatus() {
     const states = [...this.states.values()];
-    const ready = states.filter((state) => state.status === "LIVE" && state.historyLoaded && state.subscribed && state.contractSupported).length;
+    const ready = states.filter((state) => state.status === "LIVE" && state.historyLoaded && state.firstLiveTick && state.subscribed && state.contractSupported).length;
     if (!this.running) this.engineStatus = "STOPPED";
     else if (states.length > 0 && ready === states.length) { this.engineStatus = "READY"; this.message = "All configured indices are receiving live ticks."; }
     else if (ready > 0) { this.engineStatus = "PARTIALLY_READY"; this.message = `${ready} of ${states.length} configured indices are live.`; }
@@ -324,7 +335,7 @@ export class IndicesDataEngine {
   getLatestCandle(symbol: string, timeframe: IndicesTimeframe) { return this.getCandles(symbol, timeframe).at(-1) ?? null; }
   getMarketState(symbol: string) { const snapshot = this.getMarketSnapshot(symbol); return snapshot?.marketState ?? null; }
   getDataHealth(symbol: string): IndicesDataHealth | null { const state = this.states.get(symbol); if (!state) return null; const age = state.latest ? Math.max(0, this.getServerTime() - state.latest.epoch * 1000) : null; return { state: state.status, quality: this.quality(state, age), dataAge: age, latencyMs: state.latest ? Math.max(0, state.latest.receivedAt - (state.latest.epoch * 1000 + this.serverTimeOffset)) : null, historyLoaded: state.historyLoaded, subscribed: state.subscribed, subscriptionId: state.subscriptionId, error: state.error }; }
-  isDataReady(symbol: string) { const state = this.states.get(symbol); const health = this.getDataHealth(symbol); return Boolean(state?.contractSupported && health?.state === "LIVE" && health.historyLoaded && health.subscribed); }
+  isDataReady(symbol: string) { const state = this.states.get(symbol); const health = this.getDataHealth(symbol); return Boolean(state?.contractSupported && state.firstLiveTick && health?.state === "LIVE" && health.historyLoaded && health.subscribed); }
 
   getMarketSnapshot(symbol: string): IndicesMarketSnapshot | null {
     const state = this.states.get(symbol); if (!state) return null;

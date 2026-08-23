@@ -2,6 +2,7 @@ import type { IndicesDataEngine, IndicesMarketSnapshot } from "@/bots/indices-da
 import { configForSymbol, INDICES_STRATEGY_CONFIG, type IndicesStrategyConfig, type StrategyDirection, type StrategyMode } from "./config";
 import { EntryTimingEngine, MarketRegimeDetector, MicroStructureEngine, MomentumEngine, MultiTimeframeEngine, PullbackEngine, SignalScoringEngine, StrategySafetyGate, StructureEngine, TrendEngine, VolatilityEngine } from "./modules";
 import type { StrategyDecision, StrategyEvent, StrategySignal } from "./types";
+import { dataLogger } from "@/bots/data/logger";
 
 type SignalListener = (event: StrategyEvent) => void;
 
@@ -50,7 +51,7 @@ export class IndicesOpportunityScanner {
   onEvent(listener: SignalListener) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
   start() { if (this.running) return; this.running = true; return this.dataEngine.onEvent((event) => { if (event.type === "CANDLE_CLOSED" || event.type === "TICK_RECEIVED") this.scan(event.payload.symbol); }); }
   stop() { this.running = false; this.opportunityManager.invalidateAll(); this.opportunities.clear(); }
-  scan(symbol: string): StrategyDecision | null { if (!this.running) return null; const snapshot = this.dataEngine.getMarketSnapshot(symbol); if (!snapshot) return null; const decision = this.decisionEngine.evaluate(snapshot); const signal = this.opportunityManager.create(decision, snapshot); if (signal) { this.opportunities.set(symbol, signal); this.emit({ type: "SIGNAL_CREATED", payload: signal }); this.emit({ type: "SIGNAL_CONFIRMED", payload: signal }); this.emit({ type: "SIGNAL_READY", payload: signal }); } return decision; }
+  scan(symbol: string): StrategyDecision | null { if (!this.running) return null; const snapshot = this.dataEngine.getMarketSnapshot(symbol); if (!snapshot) return null; const decision = this.decisionEngine.evaluate(snapshot); dataLogger.info("INDICES STRATEGY", "[STRATEGY] Decision evaluated", { symbol, decision: decision.decision, confidence: decision.confidence, reasonCode: decision.reasonCode }); const signal = this.opportunityManager.create(decision, snapshot); if (signal) { this.opportunities.set(symbol, signal); this.emit({ type: "SIGNAL_CREATED", payload: signal }); this.emit({ type: "SIGNAL_CONFIRMED", payload: signal }); this.emit({ type: "SIGNAL_READY", payload: signal }); } return decision; }
   getBestOpportunities() { return [...this.opportunities.values()].sort((a, b) => b.confidence - a.confidence); }
   expire(now = Date.now()) { for (const [symbol, signal] of this.opportunities) { const snapshot = this.dataEngine.getMarketSnapshot(symbol); if (!snapshot || !this.opportunityManager.validate(signal, snapshot, now)) { this.opportunities.delete(symbol); this.emit({ type: signal.status === "EXPIRED" ? "SIGNAL_EXPIRED" : "SIGNAL_INVALIDATED", payload: signal }); } } }
   private emit(event: StrategyEvent) { for (const listener of this.listeners) listener(event); }
